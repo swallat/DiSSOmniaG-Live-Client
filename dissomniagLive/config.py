@@ -26,6 +26,6 @@ rpcServerPort = 8008
 SSL = True
 
 #Generate with: openssl req -new -x509 -days 365 -nodes -out cert.pem -keyout key.pem
-sslPrivateKey = os.path.join(os.curdir, "key.pem")
-sslCertFile = os.path.join(os.curdir, "cert.pem")
+sslPrivateKey = "/etc/ssl/private/ssl-cert-snakeoil.key"
+sslCertFile = "/etc/ssl/certs/ssl-cert-snakeoil.pem"
 
