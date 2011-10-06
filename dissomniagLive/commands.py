@@ -5,7 +5,7 @@ Created on 28.09.2011
 @author: Sebastian Wallat
 """
 import subprocess, shlex, logging
-import dissomniag
+import dissomniagLive
 
 log = logging.getLogger("dissomniagLive.commands.py")
 
