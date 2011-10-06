@@ -15,7 +15,7 @@ import config
 #  http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
 #===============================================================================
  
-class daemon:
+class Daemon:
     """A generic daemon class.
 
     Usage: subclass the daemon class and override the run() method."""
@@ -119,7 +119,7 @@ class daemon:
                 if os.path.exists(self.pidfile):
                     os.remove(self.pidfile)
             else:
-                print (str(err.args))
+                print((str(err.args)))
                 sys.exit(1)
 
     def restart(self):
@@ -150,8 +150,8 @@ class DissomniagDaemon(Daemon):
             sys.stdout = myFile
             sys.stderr = myFile
         
-        import dissomniag
-        dissomniag.run()
+        import dissomniagLive
+        dissomniagLive.run()
         
         if self.debug:
             myFile.close()

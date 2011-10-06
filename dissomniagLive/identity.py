@@ -7,7 +7,6 @@ Created on 28.09.2011
 import os
 import logging
 import sys
-import netifaces
 import crypt, string, random
 from xml.etree import ElementTree
 import dissomniagLive
@@ -46,13 +45,12 @@ class LiveIdentity(object):
             # Der Konstruktor wird bei jeder Instanziierung aufgerufen.
             # Einmalige Dinge wie zum Beispiel die Initialisierung von Klassenvariablen müssen also in diesen Block.
             self._ready = True
-            
-            self._prepare()
         
-    def getIdentity(self):
-        pass
+    @staticmethod
+    def getIdentity():
+        return LiveIdentity()
         
-    def _prepare(self):
+    def prepare(self):
         if not self._mountCdImage():
             log.Error("General Error")
             sys.exit(-1)
@@ -61,35 +59,38 @@ class LiveIdentity(object):
             tree = ElementTree.parse(f)
         
         uuid = tree.find("uuid")
-        if uuid:
+        if uuid != None:
             self.uuid = str(uuid.text)
         
         serverIp = tree.find("serverIp")
-        if serverIp:
+        if serverIp != None:
             self.serverIp = str(serverIp.text)
         
         password = tree.find("password")
-        if password:
+        if password != None:
             self._parseAdminPW(str(password.text))
         
         iterInterfaces = []
-        interfaces = tree.findall("interfaces")
+        interfaces = tree.findall("interface")
         for interface in interfaces:
             name = interface.find("name")
             mac = interface.find("mac")
-            if name and mac:
+            if name != None and mac != None:
                 i = {}
                 i["name"] = str(name.text)
                 i["mac"] = str(mac.text)
-                iterInterfaces.append(iter)
-                
-        self._renameInterfaces(iterInterfaces)
-        self._generateSSLCertificates()
+                iterInterfaces.append(i)
+        self.iterInterfaces = iterInterfaces
+        try:
+            self._renameInterfaces(iterInterfaces)
+            self._generateSSLCertificates()
+        finally:
+            self._umountCdImage()
     
     def _mountCdImage(self):
         try:
-            os.mkdir(self.pathToCd, mode = '0777')
-        except IOError, e:
+            os.mkdir(self.pathToCd, 444)
+        except IOError as e:
             log.Error("Could not create Cdrom Directory!")
             return False
         
@@ -99,21 +100,37 @@ class LiveIdentity(object):
             log.Error("Could not mount Cd")
             return False
         return True
+    
+    def _umountCdImage(self):
+        cmd = dissomniagLive.commands.StandardCmd("umount /dev/cdrom", log = log)
+        code, output = cmd.run()
+        if code != 0:
+            log.Error("Could not umount Cd")
+    
+        try:
+            os.rmdir(self.pathToCd)
+        except IOError as e:
+            log.Error("Could not create Cdrom Directory!")
+        
+        return True
+        
         
     
     def _renameInterfaces(self, iterInterfaces):
-        # Stop gnome-network-manager
-        cmd = dissomniagLive.commands.StandardCmd("/etc/init.d/network-manager stop")
-        code, output = cmd.run()
-        if code != 0:
-            pass
-        
         # Deactivate all Interfaces
-        for interface in self._getLocalInterfaceNames():
+        lastFound = False
+        i = 0
+        while not lastFound:
+            interface = "eth%d" % i
             cmd = dissomniagLive.commands.StandardCmd("/sbin/ifconfig %s down" % str(interface), log)
             code, output = cmd.run()
+            i = i + 1
             if code != 0:
-                pass
+                if code == 255:
+                    lastFound = True
+                    break
+                else:
+                    pass
         
         # Stop Networking
         cmd = dissomniagLive.commands.StandardCmd("/etc/init.d/networking stop", log)
@@ -122,14 +139,16 @@ class LiveIdentity(object):
             pass
         
         # Add udev rules
-        with open("/etc/udev/rules/70-persistent-net.rules", 'a') as f:
+        with open("/etc/udev/rules.d/70-persistent-net.rules", 'a') as f:
             for interface in iterInterfaces:
                 f.write('KERNEL=="eth*", ATTR{address}=="%s", NAME="%s"\n' % (interface["mac"], interface["name"]))
             f.flush()
         
         # Add network/interfaces definition
         
-        with open("/etc/network/interfaces", 'a') as f:
+        with open("/etc/network/interfaces", 'w') as f:
+            f.write("auto lo\n")
+            f.write("iface lo inet loopback\n")
             for interface in iterInterfaces:
                 f.write("\nauto %s\n" % interface["name"])
                 f.write("iface %s inet dhcp\n\n" % interface["name"])
@@ -164,6 +183,12 @@ class LiveIdentity(object):
         self.adminPW = crypt.crypt(password, salt)
         
     def authServer(self, username, password):
+        """
+        this is dangerous. Delete following return to secure
+        """
+        #return self.authRPCUser(username, password)
+        ### End DANGEROUS
+        
         if username != self.uuid:
             return False
         
@@ -185,16 +210,6 @@ class LiveIdentity(object):
         if code != 0:
             pass
     
-    def _getLocalInterfaceNames(self):
-        excludedInterfaces = ['lo', 'lo0']
-        returnMe = []
-        interfaces = netifaces.interfaces()
-        for interface in interfaces:
-            if interface in excludedInterfaces:
-                continue
-            returnMe.append(interface)
-        return returnMe
-    
     def authRPCUser(self, username, password):
         if username != "admin":
             return LOGIN_SIGN.NO_SUCH_USER, None
@@ -209,6 +224,10 @@ class LiveIdentity(object):
         if self.isStarted:
             raise RuntimeError("Restart is not allowed!")
         else:
+            self.prepare()
             self.isStarted = True
-            dissomniagLive.server.startRPCServer()
+            dissomniagLive.server.startRpcServer()
+            
+    def cleanUp(self):
+        pass
             

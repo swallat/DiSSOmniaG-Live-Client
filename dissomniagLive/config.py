@@ -7,8 +7,11 @@ Created on 28.09.2011
 
 import os
 
-isDebug = (True if (os.environ['DEBUG'] in ("True", "1")) else False)
-
+try:
+    isDebug = (True if (os.environ['DEBUG'] in ("True", "1")) else False)
+except KeyError:
+    isDebug = False
+    
 execDir = (os.getcwd() if isDebug else "/usr/share/omnet/")
 
 logDir = (os.path.join(os.getcwd(), "log") if isDebug else "/var/log/")

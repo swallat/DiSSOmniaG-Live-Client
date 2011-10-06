@@ -1,8 +1,10 @@
-import config
-from identity import *
-import server
-import api
-import logging, logger
+from . import config
+from .identity import *
+from . import server
+from . import api
+from . import logger
+from . import commands
+import logging
 
 log = logging.getLogger("__init__")
 

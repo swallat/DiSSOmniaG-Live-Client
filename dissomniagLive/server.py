@@ -1,116 +1,127 @@
 # -*- coding: utf-8 -*-
 """
-Created on 28.09.2011
+Created on 06.10.2011
 
 @author: Sebastian Wallat
 """
-# Imports for XML RPC Server
-import xmlrpclib, traceback, sys, sched, time, logging
-from twisted.web import xmlrpc, server, http
-from twisted.internet import defer, reactor, ssl
 
-import dissomniagLive
+import socket
+import socketserver
+import ssl
+from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCDispatcher, SimpleXMLRPCRequestHandler
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
-log = logging.getLogger("server.py")
+from . import dissomniagLive
 
-#===============================================================================
-# The Following Twisted XML-RPC Code was extracted in main Parts 
-# from the Glab ToMaTo Project.
-#===============================================================================
+#    Easiest way to create the key file pair was to use OpenSSL -- http://openssl.org/ Windows binaries are available
+#    You can create a self-signed certificate easily "openssl req -new -x509 -days 365 -nodes -out cert.pem -keyout privatekey.pem"
+#    for more information --  http://docs.python.org/library/ssl.html#ssl-certificates
+   
+class AsyncXMLRPCServerTLS(socketserver.ThreadingMixIn, SimpleXMLRPCServer):
+    def __init__(self, addr, requestHandler = SimpleXMLRPCRequestHandler,
+                 logRequests = True, allow_none = False, encoding = None, bind_and_activate = True):
+        """Overriding __init__ method of the SimpleXMLRPCServer
 
+        The method is an exact copy, except the TCPServer __init__
+        call, which is rewritten using TLS
+        """
+        self.logRequests = logRequests
 
-class Introspection():
-    def __init__(self, papi):
-        self.api = papi
+        SimpleXMLRPCDispatcher.__init__(self, allow_none, encoding)
 
-    def listMethods(self, user = None):
-        return [m for m in dir(self.api) if (callable(getattr(self.api, m)) 
-                                             and not m.startswith("_"))]
-    
-    # ToDO Reimplememtz
-    def methodSignature(self, method, user = None):
-        func = getattr(self.api, method)
-        if not func:
-            return "Unknown method: %s" % method
-        import inspect
-        argspec = inspect.getargspec(func)
-        argstr = inspect.formatargspec(argspec.args[:-1], defaults = argspec.defaults[:-1])
-        return method + argstr
+        """This is the modified part. Original code was:
 
-    def methodHelp(self, method, user = None):
-        func = getattr(self.api, method)
-        if not func:
-            return "Unknown method: %s" % method
-        doc = func.__doc__
-        if not doc:
-            return "No documentation for: %s" % method
-        return doc
-        
-class APIServer(xmlrpc.XMLRPC):
-    #def __init__(self, papi):
-    def __init__(self, papi):
-        self.api = papi
-        self.introspection = Introspection(self.api)
-        xmlrpc.XMLRPC.__init__(self, allowNone = True)
-        #self.logger = tomato.lib.log.Logger(tomato.config.LOG_DIR + "/api.log")
+            socketserver.TCPServer.__init__(self, addr, requestHandler, bind_and_activate)
 
-    #def log(self, function, args, user):
-    #    if len(str(args)) < 50:
-    #        self.logger.log("%s%s" % (function.__name__, args), user = user.name)
-    #    else:
-    #        self.logger.log(function.__name__, bigmessage = str(args) + 
-    #                        "\n", user = user.name)
+        which executed:
 
-    def execute(self, function, args, user):
-        try:
-            #self.log(function, args, user)
-            #return function(*(args[0]), user = user, **(args[1]))
-            return function(*(args))
-        except xmlrpc.Fault, exc:
-            #fault.log(exc)
-            raise exc
-        except Exception, exc:
-            #fault.log(exc)
-            #self.logger.log("Exception: %s" % exc, user = user.name)
-            #raise fault.wrap(exc)
-            raise exc
+            def __init__(self, server_address, RequestHandlerClass, bind_and_activate=True):
+                BaseServer.__init__(self, server_address, RequestHandlerClass)
+                self.socket = socket.socket(self.address_family,
+                                            self.socket_type)
+                if bind_and_activate:
+                    self.server_bind()
+                    self.server_activate()
 
-    def render(self, request):
-        username = request.getUser()
-        passwd = request.getPassword()
-        sign, user = dissomniagLive.getIdentity().authRPCUser(username, passwd) 
-        if sign != dissomniagLive.LOGIN_SIGN.VALID_USER:
-            request.setResponseCode(http.UNAUTHORIZED)
-            if username == '' and passwd == '':
-                return 'Authorization required!'
-            else:
-                return 'Authorization Failed!'
-        request.content.seek(0, 0)
-        args, functionPath = xmlrpclib.loads(request.content.read())
-        function = None
-        if hasattr(self.api, functionPath):
-            function = getattr(self.api, functionPath)
-        if functionPath.startswith("_"):
-            functionPath = functionPath[1:]
-        if hasattr(self.introspection, functionPath):
-            function = getattr(self.introspection, functionPath)
-        if function:
-            request.setHeader("content-type", "text/xml")
-            defer.maybeDeferred(self.execute, function, args, user).addErrback(self._ebRender).addCallback(self._cbRender, request)
-            return server.NOT_DONE_YET
-        
-#===============================================================================
-# End of Extraction
-#===============================================================================
+        """
+        class VerifyingRequestHandler(SimpleXMLRPCRequestHandler):
+            '''
+            Request Handler that verifies username and password passed to
+            XML RPC server in HTTP URL sent by client.
+            '''
+            # this is the method we must override
+            def parse_request(self):
+                # first, call the original implementation which returns
+                # True if all OK so far
+                if SimpleXMLRPCRequestHandler.parse_request(self):
+                    # next we authenticate
+                    if self.authenticate(self.headers):
+                        return True
+                    else:
+                        # if authentication fails, tell the client
+                        self.send_error(401, 'Authentication failed')
+                return False
+           
+            def authenticate(self, headers):
+                from base64 import b64decode
+                #    Confirm that Authorization header is set to Basic
+                (basic, _, encoded) = headers.get('Authorization').partition(' ')
+                assert basic == 'Basic', 'Only basic authentication supported'
+               
+                #    Encoded portion of the header is a string
+                #    Need to convert to bytestring
+                encodedByteString = encoded.encode()
+                #    Decode Base64 byte String to a decoded Byte String
+                decodedBytes = b64decode(encodedByteString)
+                #    Convert from byte string to a regular String
+                decodedString = decodedBytes.decode()
+                #    Get the username and password from the string
+                (username, _, password) = decodedString.partition(':')
+                #    Check that username and password match internal global dictionary
+                if dissomniagLive.getIdentity().authServer(username, password):
+                    return True
+                else:
+                    return False
+       
+        #    Override the normal socket methods with an SSL socket
+        socketserver.BaseServer.__init__(self, addr, VerifyingRequestHandler)
+        self.socket = ssl.wrap_socket(
+            socket.socket(self.address_family, self.socket_type),
+            server_side = True,
+            keyfile = dissomniagLive.config.sslPrivateKey,
+            certfile = dissomniagLive.config.sslCertFile,
+            cert_reqs = ssl.CERT_NONE,
+            ssl_version = ssl.PROTOCOL_SSLv23,
+            )
+        if bind_and_activate:
+            self.server_bind()
+            self.server_activate()
 
-def startRPCServer():
-    log.info("Starting RPC Server")
-    api_server = APIServer(dissomniagLive.api)
-    if dissomniagLive.config.SSL:
-        log.info("Using SSL")
-        sslContext = ssl.DefaultOpenSSLContextFactory(dissomniagLive.config.sslPrivateKey, dissomniagLive.config.sslCertFile)
-        reactor.listenSSL(dissomniagLive.config.rpcServerPort, server.Site(api_server), contextFactory = sslContext) 
-    else:
-        reactor.listenTCP(dissomniagLive.config.rpcServerPort, server.Site(api_server))
-        
-    reactor.run()
+        """End of modified part"""
+
+        # [Bug #1222790] If possible, set close-on-exec flag; if a
+        # method spawns a subprocess, the subprocess shouldn't have
+        # the listening socket open.
+        if fcntl is not None and hasattr(fcntl, 'FD_CLOEXEC'):
+            flags = fcntl.fcntl(self.fileno(), fcntl.F_GETFD)
+            flags |= fcntl.FD_CLOEXEC
+            fcntl.fcntl(self.fileno(), fcntl.F_SETFD, flags)
+
+# Restrict to a particular path.
+class RequestHandler(SimpleXMLRPCRequestHandler):
+    rpc_paths = ('/RPC2',)
+
+def startRpcServer():
+    # Create server
+    server = AsyncXMLRPCServerTLS(("0.0.0.0", dissomniagLive.config.rpcServerPort), requestHandler = RequestHandler)
+    server.register_introspection_functions()
+
+    server.register_instance(dissomniagLive.api.ApiProvider())
+
+    # Run the server's main loop
+    print("Starting XML RPC Server")
+    server.serve_forever()
+    dissomniagLive.getIdentity().cleanUp()
