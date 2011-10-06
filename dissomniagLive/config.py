@@ -28,6 +28,8 @@ rpcServerPort = 8008
 
 SSL = True
 
+pidFile = "/var/run/dissomniag_live.pid"
+
 #Generate with: openssl req -new -x509 -days 365 -nodes -out cert.pem -keyout key.pem
 sslPrivateKey = "/etc/ssl/private/ssl-cert-snakeoil.key"
 sslCertFile = "/etc/ssl/certs/ssl-cert-snakeoil.pem"

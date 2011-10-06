@@ -20,7 +20,9 @@ class Daemon:
 
     Usage: subclass the daemon class and override the run() method."""
 
-    def __init__(self, pidfile): self.pidfile = pidfile
+    def __init__(self, pidfile, debug = False): 
+        self.pidfile = pidfile
+        self.debug = debug 
     
     def daemonize(self):
         """Deamonize class. UNIX double fork mechanism."""
@@ -140,6 +142,7 @@ class Daemon:
 #===============================================================================
 
 
+
 class DissomniagDaemon(Daemon):
     
     def run(self):
@@ -149,7 +152,6 @@ class DissomniagDaemon(Daemon):
             myFile.flush()
             sys.stdout = myFile
             sys.stderr = myFile
-        
         import dissomniagLive
         dissomniagLive.run()
         
@@ -168,7 +170,7 @@ if __name__ == "__main__":
         sys.exit(-1)
     
     if len(sys.argv) == 3 and "--daemon" == sys.argv[1]:
-            pidFile = config.dissomniag.pidFile
+            pidFile = config.pidFile
             daemon = DissomniagDaemon(pidFile)
             if 'start' == sys.argv[2]:
                     daemon.start()
