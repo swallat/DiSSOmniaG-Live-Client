@@ -92,13 +92,12 @@ class LiveIdentity(object):
             os.mkdir(self.pathToCd, 444)
         except IOError as e:
             log.Error("Could not create Cdrom Directory!")
-            return False
+            
         
         cmd = dissomniagLive.commands.StandardCmd("mount /dev/cdrom /media/cdrom", log = log)
         code, output = cmd.run()
         if code != 0:
             log.Error("Could not mount Cd")
-            return False
         return True
     
     def _umountCdImage(self):
@@ -126,12 +125,9 @@ class LiveIdentity(object):
             code, output = cmd.run()
             i = i + 1
             if code != 0:
-                if code == 255:
-                    lastFound = True
-                    break
-                else:
-                    pass
-        
+                lastFound = True
+                break
+                    
         # Stop Networking
         cmd = dissomniagLive.commands.StandardCmd("/etc/init.d/networking stop", log)
         code, output = cmd.run()
