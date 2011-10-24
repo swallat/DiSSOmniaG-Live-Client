@@ -90,7 +90,7 @@ class LiveIdentity(object):
     def _mountCdImage(self):
         try:
             os.mkdir(self.pathToCd, 444)
-        except IOError as e:
+        except (OSError, IOError) as e:
             log.Error("Could not create Cdrom Directory!")
             
         
@@ -108,7 +108,7 @@ class LiveIdentity(object):
     
         try:
             os.rmdir(self.pathToCd)
-        except IOError as e:
+        except (OSError, IOError) as e:
             log.Error("Could not create Cdrom Directory!")
         
         return True
