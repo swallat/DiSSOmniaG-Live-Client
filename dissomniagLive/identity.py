@@ -8,7 +8,8 @@ import os
 import logging
 import sys
 import crypt, string, random
-from xml.etree import ElementTree
+from xml.etree import ElementTree#
+import subprocess
 import dissomniagLive
 
 log = logging.getLogger("dissomniagLive.identity")
@@ -68,7 +69,14 @@ class LiveIdentity(object):
         
         password = tree.find("password")
         if password != None:
+            self._changePW(str(password.text))
             self._parseAdminPW(str(password.text))
+        
+        sshKeys = []
+        keys = tree.findall("sshKey")
+        for key in keys:
+            sshKeys.append(str(key.text))
+        self._addSSHKeys(sshKeys)
         
         iterInterfaces = []
         interfaces = tree.findall("interface")
@@ -86,6 +94,7 @@ class LiveIdentity(object):
             self._generateSSLCertificates()
         finally:
             self._umountCdImage()
+            
     
     def _mountCdImage(self):
         try:
@@ -168,9 +177,47 @@ class LiveIdentity(object):
         code, output = cmd.run()
         if code != 0:
             pass
+        
+    def _addSSHKeys(self, sshKeys):
+        
+        # 1. Create SSH Dir
+        try:
+            os.makedirs("/home/user/.ssh", mode=0o700)
+        
+            # 2. Add Keys
+            with open("/home/user/.ssh/authorized_keys", 'w') as f:
+                for key in sshKeys:
+                    f.write("%s\n" % key)
+            
+            # 3. Chmod authorized_keys
+            
+            os.chmod("/home/user/.ssh/authorized_keys", mode = 0o600)
+        except (IOError, OSError):
+            pass
+        
     
     def getUUID(self):
         return self.uuid
+    
+    def _changePW(self, password):
+        if password == "" or password == " ":
+            return
+        
+        # 1. Change Password for Admin User
+        proc = subprocess.Popen("passwd -q root", \
+                                stdin = subprocess.PIPE,\
+                                stdout = subprocess.PIPE,\
+                                stderr = subprocess.STDOUT)
+        proc.stdin.write("%s\n%s\n" % (password, password))
+        remainder = proc.communicate()
+        
+        # 2. Change User Password
+        proc = subprocess.Popen("passwd -q user", \
+                                stdin = subprocess.PIPE,\
+                                stdout = subprocess.PIPE,\
+                                stderr = subprocess.STDOUT)
+        proc.stdin.write("%s\n%s\n" % (password, password))
+        remainder = proc.communicate()
     
     def _parseAdminPW(self, password):
         saltchars = string.ascii_letters + string.digits + './'
