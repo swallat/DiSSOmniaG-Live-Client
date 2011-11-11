@@ -6,7 +6,7 @@ Created on 28.09.2011
 """
 import os
 import logging
-import sys
+import sys, socket, fcntl, struct
 import crypt, string, random
 from xml.etree import ElementTree#
 import subprocess
@@ -59,6 +59,15 @@ class LiveIdentity(object):
         with open(self.liveInfoFile, 'rt') as f:
             tree = ElementTree.parse(f)
         
+        self.fetchConfig(tree, fetchInterfaces = True)
+        
+        try:
+            self._renameInterfaces(self.iterInterfaces)
+            self._generateSSLCertificates()
+        finally:
+            self._umountCdImage()
+            
+    def fetchConfig(self, tree, fetchInterfaces = False):
         uuid = tree.find("uuid")
         if uuid != None:
             self.uuid = str(uuid.text)
@@ -89,11 +98,6 @@ class LiveIdentity(object):
                 i["mac"] = str(mac.text)
                 iterInterfaces.append(i)
         self.iterInterfaces = iterInterfaces
-        try:
-            self._renameInterfaces(iterInterfaces)
-            self._generateSSLCertificates()
-        finally:
-            self._umountCdImage()
             
     
     def _mountCdImage(self):
@@ -252,13 +256,36 @@ class LiveIdentity(object):
         code, output = cmd.run()
         if code != 0:
             pass
+        
+    def _getIpAddress(self, ifname):
+        if not isinstance(ifname, bytes):
+            ifname = str.encode(ifname)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        return socket.inet_ntoa(fcntl.ioctl(
+                                            s.fileno(),
+                                            0x8915,  # SIOCGIFADDR
+                                            struct.pack('256s', ifname[:15])
+                                            )[20:24])
+    def _getMaintainIp(self):
+        if not self.isStarted:
+            return None
+        return self._getIpAddress("maintain")
+        
+    def getXMLStatusAnswer(self):
+        tree = ElementTree.Element("NodeLiveInfo")
+        maintainIp = ElementTree.SubElement(tree, "maintainIp")
+        maintainIp.text = self._getMaintainIp()
+        state = ElementTree.SubElement(tree, "state")
+        state.text = "UP"
+        return bytes.decode(ElementTree.tostring(tree, pretty_print= True))
+        
     
     def authRPCUser(self, username, password):
-        if username != "admin":
+        if username != "maintain":
             return LOGIN_SIGN.NO_SUCH_USER, None
         if password != "test":
             return LOGIN_SIGN.SECRET_UNVALID, None
-        if username == "admin" and password == "test":
+        if username == "maintain" and password == self.uuid:
             return LOGIN_SIGN.VALID_USER, None
         else:
             return LOGIN_SIGN.UNVALID_ACCESS_METHOD, None
