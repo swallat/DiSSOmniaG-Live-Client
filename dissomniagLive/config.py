@@ -24,7 +24,9 @@ warningFilename = os.path.join(logDir, "dissomniag_WARNING")
 
 logToStdOut = True
 
-rpcServerPort = 8008
+localRpcServerPort = 8008
+
+remoteRpcServerPort = 8008
 
 SSL = True
 

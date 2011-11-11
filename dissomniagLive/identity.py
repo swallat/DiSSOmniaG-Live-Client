@@ -8,8 +8,11 @@ import os
 import logging
 import sys, socket, fcntl, struct
 import crypt, string, random
+import xmlrpc.client
 from xml.etree import ElementTree#
 import subprocess
+import threading
+import time
 import dissomniagLive
 
 log = logging.getLogger("dissomniagLive.identity")
@@ -25,10 +28,12 @@ class LiveIdentity(object):
     classdocs
     """
     uuid = None
+    commonName = None
     adminPW = None
     serverIp = None
     isStarted = False
     pathToCd = "/media/cdrom/"
+    serverReachable = False
     liveInfoFile = os.path.join(pathToCd, "liveInfo.xml")
     
     def __new__(cls, *args, **kwargs):
@@ -67,10 +72,15 @@ class LiveIdentity(object):
         finally:
             self._umountCdImage()
             
-    def fetchConfig(self, tree, fetchInterfaces = False):
-        uuid = tree.find("uuid")
-        if uuid != None:
-            self.uuid = str(uuid.text)
+    def fetchConfig(self, tree, update = False):
+        if not update:
+            uuid = tree.find("uuid")
+            if uuid != None:
+                self.uuid = str(uuid.text)
+                
+        commonName = tree.find("commonName")
+        if commonName != None:
+            self.commonName = str(commonName.text)
         
         serverIp = tree.find("serverIp")
         if serverIp != None:
@@ -87,17 +97,18 @@ class LiveIdentity(object):
             sshKeys.append(str(key.text))
         self._addSSHKeys(sshKeys)
         
-        iterInterfaces = []
-        interfaces = tree.findall("interface")
-        for interface in interfaces:
-            name = interface.find("name")
-            mac = interface.find("mac")
-            if name != None and mac != None:
-                i = {}
-                i["name"] = str(name.text)
-                i["mac"] = str(mac.text)
-                iterInterfaces.append(i)
-        self.iterInterfaces = iterInterfaces
+        if not update:
+            iterInterfaces = []
+            interfaces = tree.findall("interface")
+            for interface in interfaces:
+                name = interface.find("name")
+                mac = interface.find("mac")
+                if name != None and mac != None:
+                    i = {}
+                    i["name"] = str(name.text)
+                    i["mac"] = str(mac.text)
+                    iterInterfaces.append(i)
+            self.iterInterfaces = iterInterfaces
             
     
     def _mountCdImage(self):
@@ -273,8 +284,10 @@ class LiveIdentity(object):
         
     def getXMLStatusAnswer(self):
         tree = ElementTree.Element("NodeLiveInfo")
+        uuid = ElementTree.SubElement(tree, "uuid")
+        uuid.text = str(self.uuid)
         maintainIp = ElementTree.SubElement(tree, "maintainIp")
-        maintainIp.text = self._getMaintainIp()
+        maintainIp.text = str(self._getMaintainIp())
         state = ElementTree.SubElement(tree, "state")
         state.text = "UP"
         return bytes.decode(ElementTree.tostring(tree, pretty_print= True))
@@ -290,12 +303,35 @@ class LiveIdentity(object):
         else:
             return LOGIN_SIGN.UNVALID_ACCESS_METHOD, None
         
+    def getServerUri(self):
+        return ("https://%s:%s@%s:%s/" % (self.commonName, self.uuid, self.serverIp, str(dissomniagLive.config.remoteRpcServerPort)))
+    
+    def sendUpdateToServer(self):
+        
+        class InitialSend(threading.Thread):
+            
+            def run(self):
+                time.sleep(2)
+                proxy = xmlrpc.client.ServerProxy(dissomniagLive.getIdentity().getServerUri())
+                for i in range(1,5):
+                    if proxy.update(dissomniagLive.getIdentity().getXMLStatusAnswer()) == True:
+                        dissomniagLive.getIdentity().serverReachable = True
+                        log.info("Pushed local Infos to Server.")
+                        break
+                if dissomniagLive.getIdentity().serverReachable == False:
+                    log.error("Could not reach Central Server!")
+                    
+        InitialSend().start()
+        
+        
+        
     def start(self):
         if self.isStarted:
             raise RuntimeError("Restart is not allowed!")
         else:
             self.prepare()
             self.isStarted = True
+            self.sendUpdateToServer()
             dissomniagLive.server.startRpcServer()
             
     def cleanUp(self):

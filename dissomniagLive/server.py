@@ -116,7 +116,7 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
 
 def startRpcServer():
     # Create server
-    server = AsyncXMLRPCServerTLS(("0.0.0.0", dissomniagLive.config.rpcServerPort), requestHandler = RequestHandler)
+    server = AsyncXMLRPCServerTLS(("0.0.0.0", dissomniagLive.config.localRpcServerPort), requestHandler = RequestHandler)
     server.register_introspection_functions()
 
     server.register_instance(dissomniagLive.api.ApiProvider())
