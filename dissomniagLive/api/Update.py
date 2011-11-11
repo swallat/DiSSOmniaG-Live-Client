@@ -9,8 +9,8 @@ import dissomniagLive
 import logging
 log = logging.getLogger("api.Update.py")
 
-def update(self, infoXml):
-    xml = ElementTree.fromstring(infoXml)
-    self.dissomniagLive.getIdentity().fetchConfig(xml, update = True)
+def update(infoXml):
+    xml = ElementTree.XML(infoXml)
+    dissomniagLive.getIdentity().fetchConfig(xml, update = True)
     
     return dissomniagLive.getIdentity().getXMLStatusAnswer()

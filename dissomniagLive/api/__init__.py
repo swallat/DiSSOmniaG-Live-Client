@@ -1,8 +1,11 @@
 class ApiProvider(object):
     
-    def update(self, *args, **kwargs):
+    def update(self, infoXml):
         from . import Update
-        return Update.update(*args, **kwargs)
+        return Update.update(infoXml)
+    
+    def add(self, a, b):
+        return a+b
     
     def wait(self):
         print("Enter waiting")

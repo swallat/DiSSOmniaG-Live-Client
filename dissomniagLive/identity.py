@@ -10,18 +10,12 @@ import sys, socket, fcntl, struct
 import crypt, string, random
 import xmlrpc.client
 from xml.etree import ElementTree#
-import subprocess
+import subprocess, shlex
 import threading
 import time
 import dissomniagLive
 
 log = logging.getLogger("dissomniagLive.identity")
-
-class LOGIN_SIGN(object):
-    VALID_USER = 0
-    NO_SUCH_USER = 1
-    SECRET_UNVALID = 2
-    UNVALID_ACCESS_METHOD = 3
 
 class LiveIdentity(object):
     """
@@ -57,16 +51,17 @@ class LiveIdentity(object):
         return LiveIdentity()
         
     def prepare(self):
-        if not self._mountCdImage():
-            log.Error("General Error")
-            sys.exit(-1)
-            
-        with open(self.liveInfoFile, 'rt') as f:
-            tree = ElementTree.parse(f)
-        
-        self.fetchConfig(tree, fetchInterfaces = True)
         
         try:
+            if not self._mountCdImage():
+                log.error("General Error")
+                sys.exit(-1)
+            
+            with open(self.liveInfoFile, 'rt') as f:
+                tree = ElementTree.parse(f)
+            
+            self.fetchConfig(tree, update = False)
+            
             self._renameInterfaces(self.iterInterfaces)
             self._generateSSLCertificates()
         finally:
@@ -115,25 +110,25 @@ class LiveIdentity(object):
         try:
             os.mkdir(self.pathToCd, 444)
         except (OSError, IOError) as e:
-            log.Error("Could not create Cdrom Directory!")
+            log.error("Could not create Cdrom Directory!")
             
         
         cmd = dissomniagLive.commands.StandardCmd("mount /dev/cdrom /media/cdrom", log = log)
         code, output = cmd.run()
         if code != 0:
-            log.Error("Could not mount Cd")
+            log.error("Could not mount Cd")
         return True
     
     def _umountCdImage(self):
         cmd = dissomniagLive.commands.StandardCmd("umount /dev/cdrom", log = log)
         code, output = cmd.run()
         if code != 0:
-            log.Error("Could not umount Cd")
+            log.error("Could not umount Cd")
     
         try:
             os.rmdir(self.pathToCd)
         except (OSError, IOError) as e:
-            log.Error("Could not create Cdrom Directory!")
+            log.error("Could not create Cdrom Directory!")
         
         return True
         
@@ -206,7 +201,7 @@ class LiveIdentity(object):
             
             # 3. Chmod authorized_keys
             
-            os.chmod("/home/user/.ssh/authorized_keys", mode = 0o600)
+            os.chmod("/home/user/.ssh/authorized_keys", 0o600)
         except (IOError, OSError):
             pass
         
@@ -219,19 +214,19 @@ class LiveIdentity(object):
             return
         
         # 1. Change Password for Admin User
-        proc = subprocess.Popen("passwd -q root", \
+        proc = subprocess.Popen(shlex.split("passwd -q root"), \
                                 stdin = subprocess.PIPE,\
                                 stdout = subprocess.PIPE,\
                                 stderr = subprocess.STDOUT)
-        proc.stdin.write("%s\n%s\n" % (password, password))
+        proc.stdin.write(str.encode("%s\n%s\n" % (password, password)))
         remainder = proc.communicate()
         
         # 2. Change User Password
-        proc = subprocess.Popen("passwd -q user", \
+        proc = subprocess.Popen(shlex.split("passwd -q user"), \
                                 stdin = subprocess.PIPE,\
                                 stdout = subprocess.PIPE,\
                                 stderr = subprocess.STDOUT)
-        proc.stdin.write("%s\n%s\n" % (password, password))
+        proc.stdin.write(str.encode("%s\n%s\n" % (password, password)))
         remainder = proc.communicate()
     
     def _parseAdminPW(self, password):
@@ -247,7 +242,7 @@ class LiveIdentity(object):
         #return self.authRPCUser(username, password)
         ### End DANGEROUS
         
-        if username != self.uuid:
+        if username != "maintain":
             return False
         
         if not self.adminPW == crypt.crypt(password, self.adminPW):
@@ -290,18 +285,7 @@ class LiveIdentity(object):
         maintainIp.text = str(self._getMaintainIp())
         state = ElementTree.SubElement(tree, "state")
         state.text = "UP"
-        return bytes.decode(ElementTree.tostring(tree, pretty_print= True))
-        
-    
-    def authRPCUser(self, username, password):
-        if username != "maintain":
-            return LOGIN_SIGN.NO_SUCH_USER, None
-        if password != "test":
-            return LOGIN_SIGN.SECRET_UNVALID, None
-        if username == "maintain" and password == self.uuid:
-            return LOGIN_SIGN.VALID_USER, None
-        else:
-            return LOGIN_SIGN.UNVALID_ACCESS_METHOD, None
+        return ElementTree.tostring(tree)
         
     def getServerUri(self):
         return ("https://%s:%s@%s:%s/" % (self.commonName, self.uuid, self.serverIp, str(dissomniagLive.config.remoteRpcServerPort)))
