@@ -182,7 +182,11 @@ class LiveIdentity(object):
         if code != 0:
             pass
         
-        # Restart Networking
+        # Restart Networking twice (sanity reasons)
+        cmd = dissomniagLive.commands.StandardCmd("/etc/init.d/networking restart", log)
+        code, output = cmd.run()
+        if code != 0:
+            pass
         cmd = dissomniagLive.commands.StandardCmd("/etc/init.d/networking restart", log)
         code, output = cmd.run()
         if code != 0:
