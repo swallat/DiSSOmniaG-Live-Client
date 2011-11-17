@@ -6,6 +6,8 @@ Created on 28.09.2011
 """
 
 import os
+import pwd
+import grp
 
 try:
     isDebug = (True if (os.environ['DEBUG'] in ("True", "1")) else False)
@@ -27,6 +29,27 @@ logToStdOut = True
 localRpcServerPort = 8008
 
 remoteRpcServerPort = 8008
+
+user = "user"
+
+group = user
+
+uid = pwd.getpwnam(user).pw_uid
+
+gid = grp.getgrnam(group).gr_gid
+
+rootPrivKey = "/root/.ssh/id_rsa"
+rootPubKey = "/root/.ssh/id_rsa.pub"
+userPrivKey = "/home/user/.ssh/id_rsa"
+userPubKey = "/home/user/.ssh/id_rsa.pub"
+
+def getRoot():
+    os.seteuid(0)
+    os.setegid(0)
+    
+def getUserPerm():
+    os.seteuid(uid)
+    os.setegid(gid)
 
 SSL = True
 
