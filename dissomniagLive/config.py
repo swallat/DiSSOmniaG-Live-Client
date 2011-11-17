@@ -48,8 +48,9 @@ def getRoot():
     os.setegid(0)
     
 def getUserPerm():
-    os.seteuid(uid)
     os.setegid(gid)
+    os.seteuid(uid)
+    
 
 SSL = True
 

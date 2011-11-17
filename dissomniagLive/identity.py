@@ -89,10 +89,10 @@ class LiveIdentity(object):
         
         vmSSHSection = tree.find("vmSSHKeys")
         if vmSSHSection != None:
-            publicKey = vmSSHSection.find("publicKey")
-            privateKey = vmSSHSection.find("privateKey")
+            publicKey = str(vmSSHSection.find("publicKey").text)
+            privateKey = str(vmSSHSection.find("privateKey").text)
             if publicKey != None and privateKey != None:
-                self._resetVmSSHKey(str(publicKey), str(privateKey))
+                self._resetVmSSHKey(publicKey, privateKey)
         
         sshKeys = []
         keys = tree.findall("sshKey")
@@ -204,6 +204,15 @@ class LiveIdentity(object):
         # Write SSH Key
         try:
             os.makedirs("/home/user/.ssh", mode=0o700)
+        except (IOError, OSError):
+            pass
+        
+        try:
+            os.chown("/home/user/.ssh", dissomniagLive.config.uid, dissomniagLive.config.gid)
+        except (IOError, OSError):
+            pass
+        
+        try:
             os.makedirs("/root/.ssh", mode=0o700)
         except (IOError, OSError):
             pass
@@ -213,59 +222,42 @@ class LiveIdentity(object):
         userPrivKey = dissomniagLive.config.userPrivKey
         userPubKey = dissomniagLive.config.userPubKey
         try:
-            self._prepareSSHEnvironment()
-            cmd = shlex.split("ssh-add -D")
-            subprocess.call(cmd, stdout = open('/dev/null', 'w'),
-                            stderr = subprocess.STDOUT)
-            
-            with open(rootPrivKey, 'r') as f:
+            with open(rootPrivKey, 'w') as f:
                 f.write(privateKey)
             
             os.chown(rootPrivKey, 0, 0)
             os.chmod(rootPrivKey, 0o600)
             
-            with open(rootPubKey, 'r') as f:
+            with open(rootPubKey, 'w') as f:
                 f.write(publicKey)
             
             os.chown(rootPubKey, 0, 0)
             os.chmod(rootPubKey, 0o644)
-            
-            cmd = shlex.split("ssh-add %s" % rootPrivKey)
-            
-            subprocess.call(cmd, stdout = open('/dev/null', 'w'),
-                            stderr = subprocess.STDOUT)
-            
-            
+            self.prepareSSHEnvironment()
         except (IOError, OSError):
             pass
         try:
             dissomniagLive.config.getUserPerm()
-            self._prepareSSHEnvironment()
-            cmd = shlex.split("ssh-add -D")
-            subprocess.call(cmd, stdout = open('/dev/null', 'w'),
-                            stderr = subprocess.STDOUT)
             
-            with open(userPrivKey, 'r') as f:
+            
+            with open(userPrivKey, 'w') as f:
                 f.write(privateKey)
                 
             os.chown(userPrivKey, dissomniagLive.config.uid, dissomniagLive.config.gid)
             os.chmod(userPrivKey, 0o600)
                 
-            with open(userPubKey, 'r') as f:
+            with open(userPubKey, 'w') as f:
                 f.write(publicKey)
             os.chown(userPubKey, dissomniagLive.config.uid, dissomniagLive.config.gid)
             os.chmod(userPubKey, 0o644)
-            
-            cmd = shlex.split("ssh-add %s" % userPrivKey)
-            
-            subprocess.call(cmd, stdout = open('/dev/null', 'w'),
-                            stderr = subprocess.STDOUT)
+            self.prepareSSHEnvironment()
+
         except (IOError, OSError):
             pass
         finally:
             dissomniagLive.config.getRoot()
             
-    def _prepareSSHEnvironment(self):
+    def prepareSSHEnvironment(self):
         proc = subprocess.Popen("ssh-agent", stdout = subprocess.PIPE,
                                             stderr = subprocess.STDOUT)
         lines = []
@@ -273,7 +265,8 @@ class LiveIdentity(object):
             line = proc.stdout.readline()
             if not line:
                 break
-            lines.append(line)
+            lines.append(bytes.decode(line))
+        proc.communicate()
             
         for line in lines:
             commands = line.split(";")
@@ -283,8 +276,24 @@ class LiveIdentity(object):
                 pointers = command.split("=")
                 if len(pointers) != 2:
                     continue
-                log.info(command)
+                print(command)
                 os.environ[pointers[0]] = pointers[1]
+        
+        cmd = shlex.split("ssh-add -D")
+        subprocess.call(cmd, stdout = open('/dev/null', 'w'),
+                            stderr = subprocess.STDOUT)
+        
+        if os.getuid == dissomniagLive.config.uid:
+            
+            cmd = shlex.split("ssh-add %s" % dissomniagLive.config.userPrivKey)
+            
+            subprocess.call(cmd, stdout = open('/dev/null', 'w'),
+                            stderr = subprocess.STDOUT)
+        else:
+            cmd = shlex.split("ssh-add %s" % dissomniagLive.config.rootPrivKey)
+            
+            subprocess.call(cmd, stdout = open('/dev/null', 'w'),
+                            stderr = subprocess.STDOUT)
         
         
     def _addSSHKeys(self, sshKeys):
@@ -292,6 +301,11 @@ class LiveIdentity(object):
         # 1. Create SSH Dir
         try:
             os.makedirs("/home/user/.ssh", mode=0o700)
+        except (IOError, OSError):
+            pass
+        
+        try:
+            os.chown("/home/user/.ssh", dissomniagLive.config.uid, dissomniagLive.config.gid)
         except (IOError, OSError):
             pass
         
