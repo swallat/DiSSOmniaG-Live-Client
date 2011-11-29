@@ -74,9 +74,9 @@ class LiveIdentity(object):
             if uuid != None:
                 self.uuid = str(uuid.text)
                 
-        commonName = tree.find("commonName")
-        if commonName != None:
-            self.commonName = str(commonName.text)
+            commonName = tree.find("commonName")
+            if commonName != None:
+                self.commonName = str(commonName.text)
         
         serverIp = tree.find("serverIp")
         if serverIp != None:

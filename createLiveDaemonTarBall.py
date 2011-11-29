@@ -73,7 +73,7 @@ if __name__ == '__main__':
     except Exception:
         failed = True
     finally:
-        #cleanUp()
+        cleanUp()
         if failed:
             exit(-1)
         else:

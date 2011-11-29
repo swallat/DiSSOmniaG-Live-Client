@@ -7,6 +7,7 @@ Created on 27.09.2011
 """
 
 import sys, os, time, atexit, signal
+import setproctitle
 import config
 
 #===============================================================================
@@ -146,6 +147,7 @@ class Daemon:
 class DissomniagDaemon(Daemon):
     
     def run(self):
+        setproctitle.setproctitle("dissomniagLive")
         if self.debug:
             myFile = open("/var/log/dissomniagDaemonInfo.log", "a+")
             myFile.write("In run")
@@ -184,6 +186,7 @@ if __name__ == "__main__":
                     sys.exit(2)
             sys.exit(0)
     elif len(sys.argv) == 1 or (len(sys.argv) == 2 and "--nodaemon" == sys.argv[1]):
+        setproctitle.setproctitle("dissomniagLive")
         import dissomniagLive
         dissomniagLive.run()
     else:
