@@ -8,10 +8,11 @@ import multiprocessing, threading
 import subprocess, shlex, logging
 import time
 import dissomniagLive
+from dissomniagLive import appStates
 
 class AppState:
     INIT = 0
-    CHECKED_OUT = 1
+    CLONED = 1
     COMPILED = 2
     STARTED = 3
     CLONE_ERROR = 4
@@ -21,7 +22,7 @@ class AppState:
     
     @staticmethod
     def isValid(appState):
-        if 0 <= appState < 8:
+        if 0 <= appState < 8 and isinstance(appState, int):
             return True
         else:
             return False
@@ -30,8 +31,8 @@ class AppState:
     def getName(appState):
         if appState == AppState.INIT:
             return "INIT"
-        elif appState == AppState.CHECKED_OUT:
-            return "CHECKED_OUT"
+        elif appState == AppState.CLONEDT:
+            return "CLONED"
         elif appState == AppState.COMPILED:
             return "COMPILED"
         elif appState == AppState.STARTED:
@@ -69,11 +70,9 @@ class App(multiprocessing.Process):
         self.namespace.actionToDoArrived = False
         self.namespace.action = None
         self.isRunning = True
+        self.stateObjects = {}
+        self.state = None
         
-    def selectState(self, appState):
-        if not AppState.isValid(appState):
-            return
-                
     def getInfo(self):
         return self.namespace.state, self.namespace.log
     
@@ -94,6 +93,30 @@ class App(multiprocessing.Process):
         """
         Select Initial State and CheckOut
         """
+        self.stateObjects = {}
+        self.stateObjects[AppState.CLONED] = appStates.Cloned_AppState(self)
+        self.stateObjects[AppState.CLONE_ERROR] = appStates.CloneError_AppState(self)
+        self.stateObjects[AppState.COMPILED] = appStates.Compiled_AppState(self)
+        self.stateObjects[AppState.COMPILE_ERROR] = appStates.CompileError_AppState(self)
+        self.stateObjects[AppState.INIT] = appStates.Init_AppState(self)
+        self.stateObjects[AppState.PULL_ERROR] = appStates.PullError_AppState(self)
+        self.stateObjects[AppState.RUNTIME_ERROR] = appStates.RuntimeError_AppState(self)
+        self.stateObjects[AppState.STARTED] = appStates.Started_AppState(self)
+        
+        self._selectState(AppState.INIT)
+        
+        self._clone()
+        
+        
+        
+        
+        
+    def _selectState(self, appState):
+        with self.threadingLock:
+            if AppState.isValid(appState):
+                self.state = self.stateObjects[appState]
+                self.namespace.state = AppState.getName(appState)
+        
     
     def _cleanUp(self):
         """
@@ -129,14 +152,21 @@ class App(multiprocessing.Process):
                 self._interrupt()
                 self.thread = actorToRun
                 self.thread.start()
+    
+    def _startStandard(self):
+        self._startScript("start")
             
-    def _start(self):
+    def _startScript(self, scriptName):
         with self.lock:
-            self._abstractStartActor(GeneralActor(self, self._Tstart))
+            self._abstractStartActor(GeneralActor(self, self._Tstart, scriptName))
     
     def _stop(self):
         with self.lock:
             self._abstractStartActor(GeneralActor(self, self._Tstop))
+            
+    def _clone(self):
+        with self.lock:
+            self._abstractStartActor(GeneralActor(self, self._Tclone))
             
     def _compile(self):
         with self.lock:
@@ -154,10 +184,13 @@ class App(multiprocessing.Process):
         with self.lock:
             self._abstractStartActor(GeneralActor(self, self._TrefreshGitAndReset, tagOrCommit))
     
-    def _Tstart(self, actor, *args, **kwargs):
+    def _Tstart(self, actor, scriptName, *args, **kwargs):
         pass
     
     def _Tstop(self, actor, *args, **kwargs):
+        pass
+
+    def _Tclone(self, actor, *args, **kwargs):
         pass
     
     def _Tcompile(self, actor, *args, **kwargs):
