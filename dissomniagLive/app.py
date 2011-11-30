@@ -105,10 +105,7 @@ class App(multiprocessing.Process):
         
         self._selectState(AppState.INIT)
         
-        self._clone()
-        
-        
-        
+        self._clone()   
         
         
     def _selectState(self, appState):
@@ -128,6 +125,14 @@ class App(multiprocessing.Process):
         """
         Delete current object from Dispatcher
         """
+        
+    def _cleanLog(self):
+        with self.threadingLock and self.lock:
+            self.namespace.log = ""
+            
+    def _appendLog(self, msg):
+        with self.threadingLock and self.lock:
+            self.log = self.log + msg + "\n"
         
     def _sendInfo(self):
         with self.lock and self.threadingLock: # Da wir auf namespace Daten lesend bzw. schreibend zugreifen
