@@ -82,7 +82,7 @@ class App(multiprocessing.Process):
             self._prepare()
             while self.isRunning:
                 if not self.namespace.actionToDoArrived:
-                    self.waitingCondition.wait() # Nur warten, wenn kein Auftrag vorliegt
+                    self.waitingCondition.wait() # Nur warten, wenn kein Auftrag vorliegt 
                 
                 if self.namespace.actionToDoArrived:
                     self.namespace.actionToDoArrived = False
