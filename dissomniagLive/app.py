@@ -345,6 +345,8 @@ class App(multiprocessing.Process):
                 proxy.updateAppInfo(self._getInfoXmlMsg())
             except Exception as e:
                 self.log.error("Could not send Info to central system. %s" % str(e))
+            else:
+                self._cleanLog()
                 
     
     def _interrupt(self):
