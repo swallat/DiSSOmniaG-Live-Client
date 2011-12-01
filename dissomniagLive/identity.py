@@ -4,6 +4,7 @@ Created on 28.09.2011
 
 @author: Sebastian Wallat
 """
+import multiprocessing
 import os
 import logging
 import sys, socket, fcntl, struct
@@ -52,7 +53,7 @@ class LiveIdentity(object):
         return LiveIdentity()
         
     def prepare(self):
-        
+        self.sshConfigLock = multiprocessing.RLock()
         try:
             if not self._mountCdImage():
                 log.error("General Error")
@@ -65,6 +66,7 @@ class LiveIdentity(object):
             
             self._renameInterfaces(self.iterInterfaces)
             self._generateSSLCertificates()
+            self._generateBaseAppFolder
         finally:
             self._umountCdImage()
             
@@ -81,6 +83,7 @@ class LiveIdentity(object):
         serverIp = tree.find("serverIp")
         if serverIp != None:
             self.serverIp = str(serverIp.text)
+        self.disableStrictServerKeyChecking(serverIp)
         
         password = tree.find("password")
         if password != None:
@@ -256,8 +259,9 @@ class LiveIdentity(object):
             pass
         finally:
             dissomniagLive.config.getRoot()
-            
-    def prepareSSHEnvironment(self):
+    
+    @staticmethod        
+    def prepareSSHEnvironment():
         proc = subprocess.Popen("ssh-agent", stdout = subprocess.PIPE,
                                             stderr = subprocess.STDOUT)
         lines = []
@@ -294,7 +298,12 @@ class LiveIdentity(object):
             
             subprocess.call(cmd, stdout = open('/dev/null', 'w'),
                             stderr = subprocess.STDOUT)
-        
+            
+    @staticmethod
+    def disableStrictServerKeyChecking(hostOrIp):
+        with dissomniagLive.getIdentity().sshConfigLock:
+            pass
+            
         
     def _addSSHKeys(self, sshKeys):
         
@@ -379,6 +388,16 @@ class LiveIdentity(object):
         cmd = dissomniagLive.commands.StandardCmd("make-ssl-cert generate-default-snakeoil", log)
         code, output = cmd.run()
         if code != 0:
+            pass
+    
+    def _generateBaseAppFolder(self):
+        try:
+            os.makedirs(dissomniagLive.config.appBaseFolder, 0o755)
+            os.chown(dissomniagLive.config.appBaseFolder, 1000, 1000)
+            
+            os.makedirs(dissomniagLive.config.appLogFolder, 0o755)
+            os.chown(dissomniagLive.config.appLogFolder, 1000, 1000)
+        except OSError:
             pass
         
     def _getIpAddress(self, ifname):

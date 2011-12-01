@@ -67,4 +67,4 @@ def doLogEnd():
     
     
 
-logger = setUpLogger(logging.getLogger(''))
+logger = setUpLogger(logging.getLogger('dissomniagLive'))

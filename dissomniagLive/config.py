@@ -60,3 +60,7 @@ pidFile = "/var/run/dissomniag_live.pid"
 sslPrivateKey = "/etc/ssl/private/ssl-cert-snakeoil.key"
 sslCertFile = "/etc/ssl/certs/ssl-cert-snakeoil.pem"
 
+appBaseFolder = "/home/user/apps/"
+appLogFolder = os.path.join(appBaseFolder, "logs") 
+
+

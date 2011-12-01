@@ -4,6 +4,7 @@ from . import server
 from . import api
 from . import logger
 from . import commands
+from .appStates import *
 import logging
 
 log = logging.getLogger("__init__")
