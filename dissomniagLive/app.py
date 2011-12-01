@@ -95,7 +95,7 @@ class App(multiprocessing.Process):
     classdocs
     '''
 
-    def __init__(self, name, serverUser, serverIpOrHost, rpcServerConnector, branchName, nodeUUID):
+    def __init__(self, name, serverUser, serverIpOrHost, rpcServerConnector, branchName, nodeUUID, appDeleteListener):
         
         '''
         Constructor
@@ -108,6 +108,7 @@ class App(multiprocessing.Process):
         self.serverIpOrHost = serverIpOrHost
         self.rpcServerConnector = rpcServerConnector
         self.nodeUUID = nodeUUID
+        self.appDeleteListener = appDeleteListener
         self.lock = multiprocessing.Condition()
         self.waitingCondition = multiprocessing.Condition(self.lock)
         self.threadingLock = threading.RLock()
@@ -316,6 +317,7 @@ class App(multiprocessing.Process):
         """
         Delete current object from Dispatcher
         """
+        self.appDeleteListener.deleteApp(self.name)
         
     def _cleanLog(self):
         with self.threadingLock and self.lock:

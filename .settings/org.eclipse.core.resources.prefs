@@ -1,10 +1,11 @@
-#Tue Nov 29 16:11:49 CET 2011
+#Thu Dec 01 19:32:49 CET 2011
 eclipse.preferences.version=1
 encoding//dissomniagLive/api/Update.py=utf-8
 encoding//dissomniagLive/app.py=utf-8
 encoding//dissomniagLive/appStates/AbstractAppState.py=utf-8
 encoding//dissomniagLive/commands.py=utf-8
 encoding//dissomniagLive/config.py=utf-8
+encoding//dissomniagLive/dispatcher.py=utf-8
 encoding//dissomniagLive/identity.py=utf-8
 encoding//dissomniagLive/logger.py=utf-8
 encoding//dissomniagLive/prepare.py=utf-8
