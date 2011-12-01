@@ -33,7 +33,7 @@ class AbstractAppState(metaclass=abc.ABCMeta):
         raise NotImplementedError()
     
     @abstractmethod
-    def start(self, actor):
+    def start(self, actor, scriptName):
         raise NotImplementedError()
     
     @abstractmethod
@@ -49,11 +49,11 @@ class AbstractAppState(metaclass=abc.ABCMeta):
         raise NotImplementedError()
     
     @abstractmethod
-    def refreshGit(self, actor):
+    def refreshGit(self, actor, tagOrCommit = None):
         raise NotImplementedError()
     
     @abstractmethod
-    def refreshAndReset(self, actor):
+    def refreshAndReset(self, actor, tagOrCommit = None):
         raise NotImplementedError()
     
     @abstractmethod
@@ -62,7 +62,6 @@ class AbstractAppState(metaclass=abc.ABCMeta):
     
 class AbstractRuntime_AppState(AbstractAppState, metaclass=abc.ABCMeta):
     
-    @abstractmethod
-    def setRunningScript(self, scriptName, actor):
+    def setRunningScript(self, scriptName):
         self.scriptName = scriptName
         

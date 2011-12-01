@@ -13,15 +13,16 @@ class Init_AppState(AbstractAppState):
     classdocs
     '''
         
-    def clone(self):
-        os.environ[] = 
+    def clone(self): 
         log = self.app.getLogger()
+        
         self.multiLog("Try to clone from %s to %s" % (self.app._getServerConnector(), self.app._getTargetPath()), log.info)
         cmd = shutil.shlex("git clone %s %s -b %s" % (self.app._getServerConnector(), self.app._getTargetPath()), self.app.branchName)
-        self.app.proc = subprocess.Popen(cmd, cwd = dissomniagLive.config.appBaseFolder, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
-        self.app.proc.write = "yes\n"
+        self.app.proc = subprocess.Popen(cmd, cwd = dissomniagLive.config.appBaseFolder, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
         
-        stdout, stderr = self.app.proc.communicate()
+        output = self.app.proc.communicate()
+        self.multiLog(str(output))
+        
         
         if self.app.isInterrupted:
             self.multiLog("Clone Interrupted!", log.error)
@@ -73,11 +74,17 @@ class Init_AppState(AbstractAppState):
         return True
         
     
-    def start(self,actor):
-        raise NotImplementedError()
+    def start(self,actor, scriptName):
+        if self.clone(actor):
+            return self.app.state.start(actor, scriptName)
+        else:
+            return False
     
     def stop(self, actor):
-        raise NotImplementedError()
+        if self.clone(actor):
+            return self.app.state.stop(actor)
+        else:
+            return False
     
     def after_interrupt(self, actor):
         log = self.app.getLogger()
@@ -86,18 +93,25 @@ class Init_AppState(AbstractAppState):
                 shutil.rmtree(self.app._getTargetPath())
             except OSError:
                 self.multiLog("Cannot delete App folder.", log.error)
+                return False
         self.app._selectState(dissomniagLive.app.AppState.INIT)
         return True
     
     def compile(self, actor):
-        raise NotImplementedError()
+        if self.clone(actor):
+            return self.app.state.compile(actor)
+        else:
+            return False
     
-    def refreshGit(self, actor):
-        raise NotImplementedError()
+    def refreshGit(self, actor, tagOrCommit = None):
+        if self.clone(actor):
+            return self.app.state.refreshGit(actor, tagOrCommit)
+        else:
+            return False
     
-    def refreshAndReset(self, actor):
-        raise NotImplementedError()
+    def refreshAndReset(self, actor, tagOrCommit = None):
+        return True
     
     def reset(self, actor):
-        raise NotImplementedError()
+        return True
         

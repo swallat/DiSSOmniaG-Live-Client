@@ -76,7 +76,7 @@ class App(multiprocessing.Process):
         self.state = None
         self.log = None
         self.formatter = None
-        self.time = None
+        self.time = NonehostOrIp
         self.isInterrupted = False
         self.branchName = branchName
         
@@ -111,6 +111,7 @@ class App(multiprocessing.Process):
         self.stateObjects[AppState.STARTED] = appStates.Started_AppState(self)
         
         dissomniagLive.LiveIdentity.prepareSSHEnvironment()
+        dissomniagLive.LiveIdentity.disableStrictServerKeyChecking(self.serverIpOrHost)
         
         self._initLogger()
         self.log.info("Select Initial State")
@@ -118,15 +119,6 @@ class App(multiprocessing.Process):
         self._selectState(AppState.INIT)
         
         self._clone()
-        
-    def _addServerKeyToEnvironment(self):
-        
-        cmd = shlex.split(("ssh %s@%s" % (self.serverUser, self.serverIpOrHost) ))
-        proc = subprocess.Popen(cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, subprocess.STDOUT)
-        proc.stdout.write("yes\n")
-        time.sleep(2)
-        proc.terminate()
-        return
         
     def _initLogger(self):
         with self.threadingLock:
@@ -162,6 +154,9 @@ class App(multiprocessing.Process):
     
     def _getTargetPath(self):
         return os.path.join(dissomniagLive.config.appBaseFolder, ("%s.app" % self.app.name))
+    
+    def _getOperateDirectory(self):
+        return os.path.join(self._getTargetPath(), dissomniagLive.config.operateSubdirIdentifier)
         
         
     def _selectState(self, appState):

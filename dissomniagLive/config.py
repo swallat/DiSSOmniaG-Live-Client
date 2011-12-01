@@ -61,6 +61,8 @@ sslPrivateKey = "/etc/ssl/private/ssl-cert-snakeoil.key"
 sslCertFile = "/etc/ssl/certs/ssl-cert-snakeoil.pem"
 
 appBaseFolder = "/home/user/apps/"
-appLogFolder = os.path.join(appBaseFolder, "logs") 
+appLogFolder = os.path.join(appBaseFolder, "logs")
+
+operateSubdirIdentifier = "operate"
 
 

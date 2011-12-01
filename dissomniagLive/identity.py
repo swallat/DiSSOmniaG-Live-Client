@@ -6,6 +6,7 @@ Created on 28.09.2011
 """
 import multiprocessing
 import os
+import re
 import logging
 import sys, socket, fcntl, struct
 import shutil
@@ -302,7 +303,31 @@ class LiveIdentity(object):
     @staticmethod
     def disableStrictServerKeyChecking(hostOrIp):
         with dissomniagLive.getIdentity().sshConfigLock:
-            pass
+            sshFileName = "/etc/ssh/ssh_config"
+            
+            if os.path.isfile(sshFileName):
+                lines = None
+                pattern = ("^Host %s$" % hostOrIp)
+                prog = re.compile(pattern)
+                with open(sshFileName, 'r') as f:
+                    lines = f.readlines()
+                foundHosts = []
+                for line in lines:
+                    if prog.match(line):
+                        return True
+                
+            
+            if not os.path.isfile(sshFileName):
+                try:
+                    with open(sshFileName, mode='w') as f:
+                        f.write("")
+                    os.chmod(sshFileName, 0o644)
+                except OSError:
+                    pass
+            
+            with open(sshFileName, 'a') as f:
+                f.write("Host %s\n" % hostOrIp)
+                f.write("\tStrictHostKeyChecking no\n")
             
         
     def _addSSHKeys(self, sshKeys):
