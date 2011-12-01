@@ -7,8 +7,11 @@ Created on 29.11.2011
 import multiprocessing, threading
 import subprocess, shlex, logging, os
 import time
+import xmlrpc.client
+from xml.etree import ElementTree#
 import dissomniagLive
 from dissomniagLive import appStates
+import shutil
 
 class AppState:
     INIT = 0
@@ -31,7 +34,7 @@ class AppState:
     def getName(appState):
         if appState == AppState.INIT:
             return "INIT"
-        elif appState == AppState.CLONEDT:
+        elif appState == AppState.CLONED:
             return "CLONED"
         elif appState == AppState.COMPILED:
             return "COMPILED"
@@ -45,13 +48,54 @@ class AppState:
             return "COMPILE_ERROR"
         elif appState == AppState.RUNTIME_ERROR:
             return "RUNTIME_ERROR"
+        
+class AppActions:
+    START = 0
+    STOP = 1
+    COMPILE = 2
+    RESET = 3
+    INTERRUPT = 4
+    REFRESH_GIT = 5
+    REFRESH_AND_RESET = 6
+    CLONE = 7
+    DELETE = 8
+    
+    @staticmethod
+    def isValid(appState):
+        if 0 <= appState < 9 and isinstance(appState, int):
+            return True
+        else:
+            return False
+    
+    @staticmethod
+    def getName(appState):
+        if appState == AppActions.START:
+            return "START"
+        elif appState == AppActions.STOP:
+            return "STOP"
+        elif appState == AppActions.COMPILE:
+            return "COMPILE"
+        elif appState == AppActions.RESET:
+            return "RESET"
+        elif appState == AppActions.INTERRUPT:
+            return "INTERRUPT"
+        elif appState == AppActions.REFRESH_GIT:
+            return "REFRESH_GIT"
+        elif appState == AppActions.REFRESH_AND_RESET:
+            return "REFRESH_AND_RESET"
+        elif appState == AppActions.CLONE:
+            return "CLONE"
+        elif appState == AppActions.DELETE:
+            return "DELETE"
+    
+    
 
 class App(multiprocessing.Process):
-    '''
+    '''raise NotImplementedError() 
     classdocs
     '''
 
-    def __init__(self, name, serverUser, serverIpOrHost, branchName):
+    def __init__(self, name, serverUser, serverIpOrHost, rpcServerConnector, branchName, nodeUUID):
         
         '''
         Constructor
@@ -62,6 +106,8 @@ class App(multiprocessing.Process):
         self.serverConnector = ("%s@%s:%s.git" % (serverUser, serverIpOrHost, self.name))
         self.serverUser = serverUser
         self.serverIpOrHost = serverIpOrHost
+        self.rpcServerConnector = rpcServerConnector
+        self.nodeUUID = nodeUUID
         self.lock = multiprocessing.Condition()
         self.waitingCondition = multiprocessing.Condition(self.lock)
         self.threadingLock = threading.RLock()
@@ -71,17 +117,16 @@ class App(multiprocessing.Process):
         self.namespace.log = "INIT"
         self.namespace.actionToDoArrived = False
         self.namespace.action = None
+        self.namespace.scriptName = None
+        self.namespace.tagOrCommit = None
         self.isRunning = True
         self.stateObjects = {}
         self.state = None
         self.log = None
         self.formatter = None
-        self.time = NonehostOrIp
+        self.time = None
         self.isInterrupted = False
         self.branchName = branchName
-        
-    def getInfo(self):
-        return self.namespace.state, self.namespace.log
     
     def run(self):
         with self.lock:
@@ -93,9 +138,100 @@ class App(multiprocessing.Process):
                 if self.namespace.actionToDoArrived:
                     self.namespace.actionToDoArrived = False
                     
-            self._cleanUp()
+                    action = self.namespace.action
+                    self.namespace.action = None
                     
-                    pexpect
+                    scriptName = self.namespace.scriptName
+                    self.namespace.scriptName = None
+                    
+                    tagOrCommit = self.namespace.tagOrCommit
+                    self.namespace.tagOrCommit = None
+                    
+                    if action == AppActions.START:
+                        self._startScript(scriptName)
+                    elif action == AppActions.STOPT:
+                        self._stop()
+                    elif action == AppActions.INTERRUPT:
+                        self._interrupt()
+                    elif action == AppActions.REFRESH_GIT:
+                        self._refreshGit(tagOrCommit)
+                    elif action == AppActions.REFRESH_AND_RESET:
+                        self._refreshGitAndReset(tagOrCommit)
+                    elif action == AppActions.CLONE:
+                        self._clone()
+                    elif action == AppActions.COMPILE:
+                        self._compile()
+                    elif action == AppActions.RESET:
+                        self._reset()
+                    elif action == AppActions.DELETE:
+                        self._appendRemoteLog("Delete App!")
+                        self.log.info("Delete App!")
+                        self.isRunning = False
+                        break
+                    
+            self._stop()
+            self._cleanUp()
+            
+    def startMe(self, scriptName = None):
+        with self.lock:
+            self.namespace.scriptName = scriptName
+            self.namespace.action = AppActions.START
+            self.namespace.actionToDoArrived = True
+            self.waitingCondition.notify_all()
+    
+    def stop(self):
+        with self.lock:
+            self.namespace.action = AppActions.STOP
+            self.namespace.actionToDoArrived = True
+            self.waitingCondition.notify_all()
+    
+    def interrupt(self):
+        with self.lock:
+            self.namespace.action = AppActions.INTERRUPT
+            self.namespace.actionToDoArrived = True
+            self.waitingCondition.notify_all()
+    
+    def refreshGit(self, commitOrTag = None):
+        with self.lock:
+            self.namespace.commitOrTag = commitOrTag
+            self.namespace.action = AppActions.REFRESH_GIT
+            self.namespace.actionToDoArrived = True
+            self.waitingCondition.notify_all()
+    
+    def refreshAndReset(self, commitOrTag = None):
+        with self.lock:
+            self.namespace.commitOrTag = commitOrTag
+            self.namespace.action = AppActions.REFRESH_AND_RESET
+            self.namespace.actionToDoArrived = True
+            self.waitingCondition.notify_all()
+    
+    def clone(self):
+        with self.lock:
+            self.namespace.action = AppActions.CLONE
+            self.namespace.actionToDoArrived = True
+            self.waitingCondition.notify_all()
+    
+    def compile(self):
+        with self.lock:
+            self.namespace.action = AppActions.COMPILE
+            self.namespace.actionToDoArrived = True
+            self.waitingCondition.notify_all()
+    
+    def reset(self):
+        with self.lock:
+            self.namespace.action = AppActions.RESET
+            self.namespace.actionToDoArrived = True
+            self.waitingCondition.notify_all()
+            
+    def delete(self):
+        with self.lock:
+            self.namespace.action = AppActions.DELETE
+            self.namespace.actionToDoArrived = True
+            self.waitingCondition.notify_all()
+    
+    def getInfo(self):
+        return self._getInfoXmlMsg()
+
     def _prepare(self):
         """
         Select Initial State and CheckOut
@@ -170,6 +306,10 @@ class App(multiprocessing.Process):
         """
         Delete git Folder and do other cleanup work
         """
+        try:
+            shutil.rmtree(self._getTargetPath())
+        except OSError:
+            pass
         self._removeMeFromDispatcher()
     
     def _removeMeFromDispatcher(self):
@@ -184,10 +324,28 @@ class App(multiprocessing.Process):
     def _appendRemoteLog(self, msg):
         with self.threadingLock and self.lock:
             self.log = self.log + msg + "\n"
+            
+    def _getInfoXmlMsg(self):
+        with self.lock and self.threadingLock:
+            tree = ElementTree.Element("AppInfo")
+            uuid = ElementTree.SubElement(tree, "uuid")
+            uuid.text = str(self.nodeUUID)
+            appName = ElementTree.SubElement(tree, "appName")
+            appName.text = str(self.name)
+            state = ElementTree.SubElement(tree, "state")
+            state.text = str(self.namespace.state)
+            log = ElementTree.SubElement(tree, "log")
+            log.text = str(self.namespace.log)
+            return ElementTree.tostring(tree)
         
     def _sendInfo(self):
         with self.lock and self.threadingLock: # Da wir auf namespace Daten lesend bzw. schreibend zugreifen
-            pass
+            try:
+                proxy = xmlrpc.client.ServerProxy(dissomniagLive.getIdentity().getServerUri())
+                proxy.updateAppInfo(self._getInfoXmlMsg())
+            except Exception as e:
+                self.log.error("Could not send Info to central system. %s" % str(e))
+                
     
     def _interrupt(self):
         with self.lock:
@@ -202,7 +360,7 @@ class App(multiprocessing.Process):
                     self.thread.join()
                     self.isInterrupted = False
                     
-    def _abstractStartActor(self, actorToRun):
+    def _abstractActor(self, actorToRun):
         with self.lock:
             if isinstance(actorToRun, threading.Thread):
                 self._interrupt()
@@ -214,52 +372,52 @@ class App(multiprocessing.Process):
             
     def _startScript(self, scriptName):
         with self.lock:
-            self._abstractStartActor(GeneralActor(self, self._Tstart, scriptName))
+            self._abstractActor(GeneralActor(self, self._Tstart, scriptName))
     
     def _stop(self):
         with self.lock:
-            self._abstractStartActor(GeneralActor(self, self._Tstop))
+            self._abstractActor(GeneralActor(self, self._Tstop))
             
     def _clone(self):
         with self.lock:
-            self._abstractStartActor(GeneralActor(self, self._Tclone))
+            self._abstractActor(GeneralActor(self, self._Tclone))
             
     def _compile(self):
         with self.lock:
-            self._abstractStartActor(GeneralActor(self, self._Tcompile))
+            self._abstractActor(GeneralActor(self, self._Tcompile))
     
     def _reset(self):
         with self.lock:
-            self._abstractStartActor(GeneralActor(self, self._Treset))
+            self._abstractActor(GeneralActor(self, self._Treset))
             
     def _refreshGit(self, tagOrCommit = None):
         with self.lock:
-            self._abstractStartActor(GeneralActor(self, self._TrefreshGit, tagOrCommit))
+            self._abstractActor(GeneralActor(self, self._TrefreshGit, tagOrCommit))
     
     def _refreshGitAndReset(self, tagOrCommit = None):
         with self.lock:
-            self._abstractStartActor(GeneralActor(self, self._TrefreshGitAndReset, tagOrCommit))
+            self._abstractActor(GeneralActor(self, self._TrefreshGitAndReset, tagOrCommit))
     
     def _Tstart(self, actor, scriptName, *args, **kwargs):
-        pass
+        return self.state.start(actor, scriptName)
     
     def _Tstop(self, actor, *args, **kwargs):
-        pass
+        return self.state.stop(actor)
 
     def _Tclone(self, actor, *args, **kwargs):
-        pass
+        return self.state.clone(actor)
     
     def _Tcompile(self, actor, *args, **kwargs):
-        pass
+        return self.state.compile(actor)
     
     def _Treset(self, actor, *args, **kwargs):
-        pass
+        return self.state.reset(actor)
     
     def _TrefreshGit(self, actor, tagOrCommit = None, *args, **kwargs):
-        pass
+        return self.state.refreshGit(actor, tagOrCommit)
     
     def _TrefreshGitAndReset(self, actor, tagOrCommit = None, *args, **kwargs):
-        pass
+        return self.state.refreshGitAndReset(actor)
         
 class GeneralActor(threading.Thread):
     
