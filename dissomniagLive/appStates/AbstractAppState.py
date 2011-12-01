@@ -22,41 +22,47 @@ class AbstractAppState(metaclass=abc.ABCMeta):
         
         self.app = app
         
+    def multiLog(self, msg, loggerFunction = None):
+        if loggerFunction != None:
+            loggerFunction(msg)
+            
+        self.app._appendRemoteLog(msg)
+        
     @abstractmethod
-    def clone(self):
+    def clone(self, actor):
         raise NotImplementedError()
     
     @abstractmethod
-    def start(self):
+    def start(self, actor):
         raise NotImplementedError()
     
     @abstractmethod
-    def stop(self):
+    def stop(self, actor):
         raise NotImplementedError()
     
     @abstractmethod
-    def after_interrupt(self):
+    def after_interrupt(self, actor):
         raise NotImplementedError()
     
     @abstractmethod
-    def compile(self):
+    def compile(self, actor):
         raise NotImplementedError()
     
     @abstractmethod
-    def refreshGit(self):
+    def refreshGit(self, actor):
         raise NotImplementedError()
     
     @abstractmethod
-    def refreshAndReset(self):
+    def refreshAndReset(self, actor):
         raise NotImplementedError()
     
     @abstractmethod
-    def reset(self):
+    def reset(self, actor):
         raise NotImplementedError()
     
 class AbstractRuntime_AppState(AbstractAppState, metaclass=abc.ABCMeta):
     
     @abstractmethod
-    def setRunningScript(self, scriptName):
+    def setRunningScript(self, scriptName, actor):
         self.scriptName = scriptName
         
