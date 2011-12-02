@@ -4,6 +4,18 @@ class ApiProvider(object):
         from . import Update
         return Update.update(infoXml)
     
+    def addApps(self, appXml):
+        from . import apps
+        return apps.addApps(appXml)
+    
+    def appOperate(self, appXml):
+        from . import apps
+        return apps.appOperate(appXml)
+    
+    def appGetInfo(self, appXml):
+        from . import apps
+        return apps.appOperate(appXml)
+    
     def add(self, a, b):
         return a+b
     

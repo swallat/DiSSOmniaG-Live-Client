@@ -48,6 +48,7 @@ class LiveIdentity(object):
             # Der Konstruktor wird bei jeder Instanziierung aufgerufen.
             # Einmalige Dinge wie zum Beispiel die Initialisierung von Klassenvariablen müssen also in diesen Block.
             self._ready = True
+            self.lock = multiprocessing.RLock()
         
     @staticmethod
     def getIdentity():
@@ -72,50 +73,51 @@ class LiveIdentity(object):
             self._umountCdImage()
             
     def fetchConfig(self, tree, update = False):
-        if not update:
-            uuid = tree.find("uuid")
-            if uuid != None:
-                self.uuid = str(uuid.text)
-                
-            commonName = tree.find("commonName")
-            if commonName != None:
-                self.commonName = str(commonName.text)
-        
-        serverIp = tree.find("serverIp")
-        if serverIp != None:
-            self.serverIp = str(serverIp.text)
-        self.disableStrictServerKeyChecking(serverIp)
-        
-        password = tree.find("password")
-        if password != None:
-            self._changePW(str(password.text))
-            self._parseAdminPW(str(password.text))
-        
-        vmSSHSection = tree.find("vmSSHKeys")
-        if vmSSHSection != None:
-            publicKey = str(vmSSHSection.find("publicKey").text)
-            privateKey = str(vmSSHSection.find("privateKey").text)
-            if publicKey != None and privateKey != None:
-                self._resetVmSSHKey(publicKey, privateKey)
-        
-        sshKeys = []
-        keys = tree.findall("sshKey")
-        for key in keys:
-            sshKeys.append(str(key.text))
-        self._addSSHKeys(sshKeys)
-        
-        if not update:
-            iterInterfaces = []
-            interfaces = tree.findall("interface")
-            for interface in interfaces:
-                name = interface.find("name")
-                mac = interface.find("mac")
-                if name != None and mac != None:
-                    i = {}
-                    i["name"] = str(name.text)
-                    i["mac"] = str(mac.text)
-                    iterInterfaces.append(i)
-            self.iterInterfaces = iterInterfaces
+        with self.lock:
+            if not update:
+                uuid = tree.find("uuid")
+                if uuid != None:
+                    self.uuid = str(uuid.text)
+                    
+                commonName = tree.find("commonName")
+                if commonName != None:
+                    self.commonName = str(commonName.text)
+            
+            serverIp = tree.find("serverIp")
+            if serverIp != None:
+                self.serverIp = str(serverIp.text)
+            self.disableStrictServerKeyChecking(serverIp)
+            
+            password = tree.find("password")
+            if password != None:
+                self._changePW(str(password.text))
+                self._parseAdminPW(str(password.text))
+            
+            vmSSHSection = tree.find("vmSSHKeys")
+            if vmSSHSection != None:
+                publicKey = str(vmSSHSection.find("publicKey").text)
+                privateKey = str(vmSSHSection.find("privateKey").text)
+                if publicKey != None and privateKey != None:
+                    self._resetVmSSHKey(publicKey, privateKey)
+            
+            sshKeys = []
+            keys = tree.findall("sshKey")
+            for key in keys:
+                sshKeys.append(str(key.text))
+            self._addSSHKeys(sshKeys)
+            
+            if not update:
+                iterInterfaces = []
+                interfaces = tree.findall("interface")
+                for interface in interfaces:
+                    name = interface.find("name")
+                    mac = interface.find("mac")
+                    if name != None and mac != None:
+                        i = {}
+                        i["name"] = str(name.text)
+                        i["mac"] = str(mac.text)
+                        iterInterfaces.append(i)
+                self.iterInterfaces = iterInterfaces
             
     
     def _mountCdImage(self):

@@ -65,73 +65,73 @@ class Dispatcher(object):
         with self.lock:
             app = self._getApp(name)
             if app != None:
-                app.start(scriptName)
+                return app.start(scriptName)
             else:
-                self.addApp(name, serverUser, serverIpOrHost).start(scriptName)
+                return self.addApp(name, serverUser, serverIpOrHost).start(scriptName)
                 
     def stopApp(self, name, serverUser, serverIpOrHost):
         with self.lock:
             app = self._getApp(name)
             if app != None:
-                app.stop()
+                return app.stop()
             else:
-                self.addApp(name, serverUser, serverIpOrHost).stop()
+                return self.addApp(name, serverUser, serverIpOrHost).stop()
                 
     def interruptApp(self, name, serverUser, serverIpOrHost):
         with self.lock:
             app = self._getApp(name)
             if app != None:
-                app.interrupt()
+                return app.interrupt()
             else:
-                self.addApp(name, serverUser, serverIpOrHost).interrupt()
+                return self.addApp(name, serverUser, serverIpOrHost).interrupt()
                 
     def refreshGitApp(self, name, serverUser, serverIpOrHost, commitOrTag = None):
         with self.lock:
             app = self._getApp(name)
             if app != None:
-                app.refreshGit(commitOrTag)
+                return app.refreshGit(commitOrTag)
             else:
-                self.addApp(name, serverUser, serverIpOrHost).refreshGit(commitOrTag)
+                return self.addApp(name, serverUser, serverIpOrHost).refreshGit(commitOrTag)
     
     def refreshAndResetApp(self, name, serverUser, serverIpOrHost, commitOrTag = None):
         with self.lock:
             app = self._getApp(name)
             if app != None:
-                app.refreshAndReset(commitOrTag)
+                return app.refreshAndReset(commitOrTag)
             else:
-                self.addApp(name, serverUser, serverIpOrHost).refreshAndReset(commitOrTag)
+                return self.addApp(name, serverUser, serverIpOrHost).refreshAndReset(commitOrTag)
                 
     def cloneApp(self, name, serverUser, serverIpOrHost):
         with self.lock:
             app = self._getApp(name)
             if app != None:
-                app.clone()
+                return app.clone()
             else:
-                self.addApp(name, serverUser, serverIpOrHost).clone()
+                return self.addApp(name, serverUser, serverIpOrHost).clone()
     
     def compileApp(self, name, serverUser, serverIpOrHost):
         with self.lock:
             app = self._getApp(name)
             if app != None:
-                app.compile()
+                return app.compile()
             else:
-                self.addApp(name, serverUser, serverIpOrHost).compile()
+                return self.addApp(name, serverUser, serverIpOrHost).compile()
                 
     def resetApp(self, name, serverUser, serverIpOrHost):
         with self.lock:
             app = self._getApp(name)
             if app != None:
-                app.reset()
+                return app.reset()
             else:
-                self.addApp(name, serverUser, serverIpOrHost).reset()
+                return self.addApp(name, serverUser, serverIpOrHost).reset()
     
     def deleteApp(self, name, serverUser, serverIpOrHost):
         with self.lock:
             app = self._getApp(name)
             if app != None:
-                app.delete()
+                return app.delete()
             else:
-                self.addApp(name, serverUser, serverIpOrHost).delete()
+                return True
     
     def getInfo(self, name):
         with self.lock:

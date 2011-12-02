@@ -7,7 +7,7 @@ Created on 11.11.2011
 from xml.etree import ElementTree#
 import dissomniagLive
 import logging
-log = logging.getLogger("api.Update.py")
+log = logging.getLogger("dissomniagLive.api.Update.py")
 
 def update(infoXml):
     xml = ElementTree.XML(infoXml)
