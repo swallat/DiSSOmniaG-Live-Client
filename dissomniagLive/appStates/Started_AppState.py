@@ -36,7 +36,7 @@ class Started_AppState(AbstractRuntime_AppState):
             return False
         
         cmd = file
-        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
         
         output = self.app.proc.communicate()
         self.multiLog(str(output), log.info)

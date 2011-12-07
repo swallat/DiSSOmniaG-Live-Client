@@ -40,34 +40,34 @@ class Init_AppState(AbstractAppState):
             self.app._selectState(dissomniagLive.app.AppState.CLONE_ERROR)
             return False
         
-        if not os.path.exists(os.path.join(self.app._getTargetPath, "log")):
+        if not os.path.exists(os.path.join(self.app._getTargetPath(), "log")):
             try:
-                os.makedirs(os.path.join(self.app._getTargetPath, "log"), 0o755)
-                os.chown(os.path.join(self.app._getTargetPath, "log"), 1000, 1000)
+                os.makedirs(os.path.join(self.app._getTargetPath(), "log"), 0o755)
+                os.chown(os.path.join(self.app._getTargetPath(), "log"), 1000, 1000)
             except OSError:
                 self.multiLog("Cannot create app log folder", log.error)
                 self.app._selectState(dissomniagLive.app.AppState.CLONE_ERROR)
                 return False
         
-        if not os.path.exists(os.path.join(self.app._getTargetPath, "operate")):
+        if not os.path.exists(os.path.join(self.app._getTargetPath(), "operate")):
             try:
-                os.makedirs(os.path.join(self.app._getTargetPath, "operate"), 0o755)
-                os.chown(os.path.join(self.app._getTargetPath, "operate"), 1000, 1000)
+                os.makedirs(os.path.join(self.app._getTargetPath(), "operate"), 0o755)
+                os.chown(os.path.join(self.app._getTargetPath(), "operate"), 1000, 1000)
             except OSError:
                 self.multiLog("Cannot create app operate folder", log.error)
                 self.app._selectState(dissomniagLive.app.AppState.CLONE_ERROR)
                 return False
             
-        if not os.path.exists(os.path.join(self.app._getTargetPath, "results")):
+        if not os.path.exists(os.path.join(self.app._getTargetPath(), "results")):
             try:
-                os.makedirs(os.path.join(self.app._getTargetPath, "results"), 0o755)
-                os.chown(os.path.join(self.app._getTargetPath, "results"), 1000, 1000)
+                os.makedirs(os.path.join(self.app._getTargetPath(), "results"), 0o755)
+                os.chown(os.path.join(self.app._getTargetPath(), "results"), 1000, 1000)
             except OSError:
                 self.multiLog("Cannot create app results folder", log.error)
                 self.app._selectState(dissomniagLive.app.AppState.CLONE_ERROR)
                 return False
             
-        self.app._addGitLog(self.app._getTargetPath())
+        self.app._addGitLog(self.app._getTargetPath()())
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
         if hasattr(self.app.state, "sourceEnviron") and callable(self.app.state, "sourceEnviron"):
             self.app.state.sourceEnviron(actor)
@@ -88,7 +88,7 @@ class Init_AppState(AbstractAppState):
     
     def after_interrupt(self, actor):
         log = self.app.getLogger()
-        if os.path.exists(self.app._getTargetPath):
+        if os.path.exists(self.app._getTargetPath()):
             try:
                 shutil.rmtree(self.app._getTargetPath())
             except OSError:

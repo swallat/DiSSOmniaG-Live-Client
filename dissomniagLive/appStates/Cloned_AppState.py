@@ -15,7 +15,7 @@ class Cloned_AppState(AbstractAppState):
     
     def sourceEnviron(self, actor):
         log = self.app.getLogger()
-        environFile = os.path.join(self.app._getTargetPath, "operate/environ")
+        environFile = os.path.join(self.app._getTargetPath(), "operate/environ")
         
         if os.path.isFile(environFile):
             lines = []
@@ -70,7 +70,7 @@ class Cloned_AppState(AbstractAppState):
             pass
         self.sourceEnviron(actor)
         cmd = file
-        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
         
         output = self.app.proc.communicate()
         self.muliLog(str(output))
@@ -93,7 +93,7 @@ class Cloned_AppState(AbstractAppState):
         
         cmd = shutil.split("git pull")
         
-        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
         
         output = self.app.proc.communicate()
         self.multiLog(str(output))
@@ -109,7 +109,7 @@ class Cloned_AppState(AbstractAppState):
         
         if tagOrCommit != None:
             cmd = shutil.split("git checkout %s", tagOrCommit)
-            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
             
             output = self.app.proc.communicate()
             self.multiLog(str(output))

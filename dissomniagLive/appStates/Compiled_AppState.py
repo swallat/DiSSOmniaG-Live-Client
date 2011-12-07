@@ -16,7 +16,7 @@ class Compiled_AppState(AbstractAppState):
     
     def sourceEnviron(self, actor):
         log = self.app.getLogger()
-        environFile = os.path.join(self.app._getTargetPath, "operate/environ")
+        environFile = os.path.join(self.app._getTargetPath(), "operate/environ")
         
         if os.path.isFile(environFile):
             lines = []
