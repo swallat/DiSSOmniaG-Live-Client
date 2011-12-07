@@ -6,6 +6,10 @@ from . import logger
 from . import commands
 from .appStates import *
 import logging
+from . import dispatcher
+from . import appStates
+from . import app
+
 
 log = logging.getLogger("__init__")
 

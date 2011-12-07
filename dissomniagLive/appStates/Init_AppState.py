@@ -4,7 +4,7 @@ Created on 30.11.2011
 @author: Sebastian Wallat
 '''
 import os, shutil
-impor subproccess
+import subprocess
 import dissomniagLive
 from dissomniagLive.appStates import *
 
@@ -13,11 +13,11 @@ class Init_AppState(AbstractAppState):
     classdocs
     '''
         
-    def clone(self): 
+    def clone(self, actor): 
         log = self.app.getLogger()
         
         self.multiLog("Try to clone from %s to %s" % (self.app._getServerConnector(), self.app._getTargetPath()), log.info)
-        cmd = shutil.shlex("git clone %s %s -b %s" % (self.app._getServerConnector(), self.app._getTargetPath()), self.app.branchName)
+        cmd = shlex.split("git clone %s %s -b %s" % (self.app._getServerConnector(), self.app._getTargetPath(), self.app.branchName))
         self.app.proc = subprocess.Popen(cmd, cwd = dissomniagLive.config.appBaseFolder, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
         
         output = self.app.proc.communicate()

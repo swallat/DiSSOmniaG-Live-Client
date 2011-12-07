@@ -19,8 +19,13 @@ def addApps(appXml):
         appName = str(app.find("name").text)
         serverUser = str(app.find("serverUser").text)
         serverIpOrHost = str(app.find("serverIpOrHost").text)
-        app = dispatcher.addApp(appName, serverUser, serverIpOrHost)
-        app.clone()
+        try:
+            app = dispatcher.addApp(appName, serverUser, serverIpOrHost)
+            app.clone()
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            log.error(str(e))
     return True
 
 def appOperate(appXml):
@@ -42,27 +47,32 @@ def appOperate(appXml):
     
     if commitOrTag != None:
         commitOrTag = str(commitOrTag.text)
-    
-    dispatcher = dissomniagLive.dispatcher.Dispatcher()
-    if action == dissomniagLive.app.AppActions.START:
-        return dispatcher.startApp(appName, serverUser, serverIpOrHost, scriptName)
-    elif action == dissomniagLive.app.AppActions.STOP:
-        return dispatcher.stopApp(appName, serverUser, serverIpOrHost)
-    elif action == dissomniagLive.app.AppActions.COMPILE:
-        return dispatcher.compileApp(appName, serverUser, serverIpOrHost)
-    elif action == dissomniagLive.app.AppActions.RESET:
-        return dispatcher.resetApp(appName, serverUser, serverIpOrHost)
-    elif action == dissomniagLive.app.AppActions.INTERRUPT:
-        return dispatcher.interruptApp(appName, serverUser, serverIpOrHost)
-    elif action == dissomniagLive.app.AppActions.REFRESH_GIT:
-        return dispatcher.refreshGitApp(appName, serverUser, serverIpOrHost, commitOrTag)
-    elif action == dissomniagLive.app.AppActions.REFRESH_AND_RESET:
-        return dispatcher.refreshAndResetApp(appName, serverUser, serverIpOrHost, commitOrTag)
-    elif action == dissomniagLive.app.AppActions.CLONE:
-        return dispatcher.cloneApp(appName, serverUser, serverIpOrHost)
-    elif action == dissomniagLive.app.AppActions.DELETE:
-        return dispatcher.deleteApp(appName, serverUser, serverIpOrHost)
-    else:
+    try:
+        dispatcher = dissomniagLive.dispatcher.Dispatcher()
+        if action == dissomniagLive.app.AppActions.START:
+            return dispatcher.startApp(appName, serverUser, serverIpOrHost, scriptName)
+        elif action == dissomniagLive.app.AppActions.STOP:
+            return dispatcher.stopApp(appName, serverUser, serverIpOrHost)
+        elif action == dissomniagLive.app.AppActions.COMPILE:
+            return dispatcher.compileApp(appName, serverUser, serverIpOrHost)
+        elif action == dissomniagLive.app.AppActions.RESET:
+            return dispatcher.resetApp(appName, serverUser, serverIpOrHost)
+        elif action == dissomniagLive.app.AppActions.INTERRUPT:
+            return dispatcher.interruptApp(appName, serverUser, serverIpOrHost)
+        elif action == dissomniagLive.app.AppActions.REFRESH_GIT:
+            return dispatcher.refreshGitApp(appName, serverUser, serverIpOrHost, commitOrTag)
+        elif action == dissomniagLive.app.AppActions.REFRESH_AND_RESET:
+            return dispatcher.refreshAndResetApp(appName, serverUser, serverIpOrHost, commitOrTag)
+        elif action == dissomniagLive.app.AppActions.CLONE:
+            return dispatcher.cloneApp(appName, serverUser, serverIpOrHost)
+        elif action == dissomniagLive.app.AppActions.DELETE:
+            return dispatcher.deleteApp(appName, serverUser, serverIpOrHost)
+        else:
+            return False
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        log.error(str(e))
         return False
         
 def appGetInfo(appName):
@@ -73,5 +83,11 @@ def appGetInfo(appName):
         appName = str(appName)
         
     dispatcher = dissomniagLive.dispatcher.Dispatcher()
-    return dispatcher.getInfo(appName)
+    try:
+        return dispatcher.getInfo(appName)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        log.error(str(e))
+        return None
     

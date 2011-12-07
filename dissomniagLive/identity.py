@@ -68,7 +68,7 @@ class LiveIdentity(object):
             
             self._renameInterfaces(self.iterInterfaces)
             self._generateSSLCertificates()
-            self._generateBaseAppFolder
+            self._generateBaseAppFolder()
         finally:
             self._umountCdImage()
             
@@ -86,7 +86,7 @@ class LiveIdentity(object):
             serverIp = tree.find("serverIp")
             if serverIp != None:
                 self.serverIp = str(serverIp.text)
-            self.disableStrictServerKeyChecking(serverIp)
+            self.disableStrictServerKeyChecking(self.serverIp)
             
             password = tree.find("password")
             if password != None:
@@ -125,7 +125,6 @@ class LiveIdentity(object):
             os.mkdir(self.pathToCd, 444)
         except (OSError, IOError) as e:
             log.error("Could not create Cdrom Directory!")
-            
         
         cmd = dissomniagLive.commands.StandardCmd("mount /dev/cdrom /media/cdrom", log = log)
         code, output = cmd.run()
@@ -329,7 +328,7 @@ class LiveIdentity(object):
             
             with open(sshFileName, 'a') as f:
                 f.write("Host %s\n" % hostOrIp)
-                f.write("\tStrictHostKeyChecking no\n")
+                f.write("\tStrictHostKeyChecking no\n\n")
             
         
     def _addSSHKeys(self, sshKeys):

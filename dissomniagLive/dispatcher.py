@@ -53,6 +53,7 @@ class Dispatcher(object):
         with self.lock:
             if not self._isIn(name):
                 app = dissomniagLive.app.App(name, serverUser, serverIpOrHost, dissomniagLive.getIdentity().getServerUri(), name, dissomniagLive.getIdentity().getUUID(), self.appDeleteListener)
+                app.start()
                 self.apps[name] = app
                 return app
                 

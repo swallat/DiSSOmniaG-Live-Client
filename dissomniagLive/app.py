@@ -109,8 +109,8 @@ class App(multiprocessing.Process):
         self.rpcServerConnector = rpcServerConnector
         self.nodeUUID = nodeUUID
         self.appDeleteListener = appDeleteListener
-        self.lock = multiprocessing.Condition()
-        self.waitingCondition = multiprocessing.Condition(self.lock)
+        self.r_lock = multiprocessing.RLock()
+        self.lock = multiprocessing.Condition(self.r_lock)
         self.threadingLock = threading.RLock()
         self.manager = multiprocessing.Manager()
         self.namespace = self.manager.Namespace()
@@ -134,7 +134,7 @@ class App(multiprocessing.Process):
             self._prepare()
             while self.isRunning:
                 if not self.namespace.actionToDoArrived:
-                    self.waitingCondition.wait() # Nur warten, wenn kein Auftrag vorliegt 
+                    self.lock.wait() # Nur warten, wenn kein Auftrag vorliegt 
                 
                 if self.namespace.actionToDoArrived:
                     self.namespace.actionToDoArrived = False
@@ -150,7 +150,7 @@ class App(multiprocessing.Process):
                     
                     if action == AppActions.START:
                         self._startScript(scriptName)
-                    elif action == AppActions.STOPT:
+                    elif action == AppActions.STOP:
                         self._stop()
                     elif action == AppActions.INTERRUPT:
                         self._interrupt()
@@ -178,57 +178,57 @@ class App(multiprocessing.Process):
             self.namespace.scriptName = scriptName
             self.namespace.action = AppActions.START
             self.namespace.actionToDoArrived = True
-            self.waitingCondition.notify_all()
+            self.lock.notify_all()
     
     def stop(self):
         with self.lock:
             self.namespace.action = AppActions.STOP
             self.namespace.actionToDoArrived = True
-            self.waitingCondition.notify_all()
+            self.lock.notify_all()
     
     def interrupt(self):
         with self.lock:
             self.namespace.action = AppActions.INTERRUPT
             self.namespace.actionToDoArrived = True
-            self.waitingCondition.notify_all()
+            self.lock.notify_all()
     
     def refreshGit(self, commitOrTag = None):
         with self.lock:
             self.namespace.commitOrTag = commitOrTag
             self.namespace.action = AppActions.REFRESH_GIT
             self.namespace.actionToDoArrived = True
-            self.waitingCondition.notify_all()
+            self.lock.notify_all()
     
     def refreshAndReset(self, commitOrTag = None):
         with self.lock:
             self.namespace.commitOrTag = commitOrTag
             self.namespace.action = AppActions.REFRESH_AND_RESET
             self.namespace.actionToDoArrived = True
-            self.waitingCondition.notify_all()
+            self.lock.notify_all()
     
     def clone(self):
         with self.lock:
             self.namespace.action = AppActions.CLONE
             self.namespace.actionToDoArrived = True
-            self.waitingCondition.notify_all()
+            self.lock.notify_all()
     
     def compile(self):
         with self.lock:
             self.namespace.action = AppActions.COMPILE
             self.namespace.actionToDoArrived = True
-            self.waitingCondition.notify_all()
+            self.lock.notify_all()
     
     def reset(self):
         with self.lock:
             self.namespace.action = AppActions.RESET
             self.namespace.actionToDoArrived = True
-            self.waitingCondition.notify_all()
+            self.lock.notify_all()
             
     def delete(self):
         with self.lock:
             self.namespace.action = AppActions.DELETE
             self.namespace.actionToDoArrived = True
-            self.waitingCondition.notify_all()
+            self.lock.notify_all()
     
     def getInfo(self):
         return self._getInfoXmlMsg()
@@ -261,7 +261,7 @@ class App(multiprocessing.Process):
         with self.threadingLock:
             self.log = logging.getLogger(self.name)
             self.log.setLevel(logging.DEBUG)
-            self.formatter = logging.Formatter("%(asctime)s - %(levelname)s - ", self.name, " :: %(message)s")
+            self.formatter = logging.Formatter("%(asctime)s - %(levelname)s - :: %(message)s")
             self.time = time.strftime("%d_%m_%Y_%H_%M_%S")
             fileHandler = logging.FileHandler(os.path.join(dissomniagLive.config.appLogFolder, ("%s_%s.DEBUG" % (self.name, self.time))))
             fileHandler.setFormatter(self.formatter)
@@ -290,7 +290,7 @@ class App(multiprocessing.Process):
         return self.serverConnector
     
     def _getTargetPath(self):
-        return os.path.join(dissomniagLive.config.appBaseFolder, ("%s.app" % self.app.name))
+        return os.path.join(dissomniagLive.config.appBaseFolder, ("%s.app" % self.name))
     
     def _getOperateDirectory(self):
         return os.path.join(self._getTargetPath(), dissomniagLive.config.operateSubdirIdentifier)
@@ -325,7 +325,7 @@ class App(multiprocessing.Process):
             
     def _appendRemoteLog(self, msg):
         with self.threadingLock and self.lock:
-            self.log = self.log + msg + "\n"
+            self.namespace.log = self.namespace.log + msg + "\n"
             
     def _getInfoXmlMsg(self):
         with self.lock and self.threadingLock:
@@ -349,11 +349,10 @@ class App(multiprocessing.Process):
                 self.log.error("Could not send Info to central system. %s" % str(e))
             else:
                 self._cleanLog()
-                
     
     def _interrupt(self):
         with self.lock:
-            if isinstance(self.thread, threading.Thread) and self.proc.is_alive():
+            if hasattr(self, "proc") and self.proc.is_alive():
                 try:
                     self.isInterrupted = True
                     if isinstance(self.proc, subprocess.Popen):
