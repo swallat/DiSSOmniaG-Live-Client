@@ -353,6 +353,8 @@ class LiveIdentity(object):
             # 3. Chmod authorized_keys
             
             os.chmod("/home/user/.ssh/authorized_keys", 0o600)
+            
+            os.chown("/home/user/.ssh/authorized_keys", dissomniagLive.config.uid, dissomniagLive.config.gid)
         except (IOError, OSError):
             pass
         
