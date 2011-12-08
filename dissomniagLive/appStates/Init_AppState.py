@@ -30,7 +30,7 @@ class Init_AppState(AbstractAppState):
         
         if self.app.proc.returncode != 0:
             self.app._selectState(dissomniagLive.app.AppState.CLONE_ERROR)
-            self.multiLog("Could not clone repository!", log.error)
+            self.multiLog("Could not clone repository! returncode: %s, output: %s" % (str(self.app.proc.returncode), str(output)), log.error)
             return False
         
         try:
@@ -67,9 +67,9 @@ class Init_AppState(AbstractAppState):
                 self.app._selectState(dissomniagLive.app.AppState.CLONE_ERROR)
                 return False
             
-        self.app._addGitLog(self.app._getTargetPath()())
+        self.multiLog("App cloned!", log.info)
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
-        if hasattr(self.app.state, "sourceEnviron") and callable(self.app.state, "sourceEnviron"):
+        if hasattr(self.app.state, "sourceEnviron"):
             self.app.state.sourceEnviron(actor)
         return True
         

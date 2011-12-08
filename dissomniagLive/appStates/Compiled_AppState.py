@@ -18,7 +18,7 @@ class Compiled_AppState(AbstractAppState):
         log = self.app.getLogger()
         environFile = os.path.join(self.app._getTargetPath(), "operate/environ")
         
-        if os.path.isFile(environFile):
+        if os.path.isfile(environFile):
             lines = []
             with open(environFile) as f:
                 f = lines.readlines()

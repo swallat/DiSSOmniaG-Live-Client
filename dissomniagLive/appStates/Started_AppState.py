@@ -33,10 +33,18 @@ class Started_AppState(AbstractRuntime_AppState):
             file = fileB
         else:
             self.multiLog("Couldn't start script %s. File not found." % scriptName, log.error)
+            self.app._selectState(dissomniagLive.app.AppState.RUNTIME_ERROR)
+            self.app.state.setRunningScript(scriptName)
             return False
         
         cmd = file
-        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        try:
+            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        except OSError as e:
+            self.multiLog("Script %s is not executable or is not a script file. %s" % (file,str(e)))
+            self.app._selectState(dissomniagLive.app.AppState.RUNTIME_ERROR)
+            self.app.state.setRunningScript(scriptName)
+            return False
         
         output = self.app.proc.communicate()
         self.multiLog(str(output), log.info)
