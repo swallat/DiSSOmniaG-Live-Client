@@ -12,9 +12,9 @@ class ApiProvider(object):
         from . import apps
         return apps.appOperate(appXml)
     
-    def appGetInfo(self, appXml):
+    def getAppInfo(self, appName):
         from . import apps
-        return apps.appOperate(appXml)
+        return apps.getAppInfo(appName)
     
     def add(self, a, b):
         return a+b
