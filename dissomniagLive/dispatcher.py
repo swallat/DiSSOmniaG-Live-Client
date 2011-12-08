@@ -66,9 +66,9 @@ class Dispatcher(object):
         with self.lock:
             app = self._getApp(name)
             if app != None:
-                return app.start(scriptName)
+                return app.startMe(scriptName)
             else:
-                return self.addApp(name, serverUser, serverIpOrHost).start(scriptName)
+                return self.addApp(name, serverUser, serverIpOrHost).startMe(scriptName)
                 
     def stopApp(self, name, serverUser, serverIpOrHost):
         with self.lock:

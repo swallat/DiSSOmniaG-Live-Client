@@ -376,7 +376,7 @@ class App(multiprocessing.Process):
             
     def _startScript(self, scriptName):
         with self.lock:
-            self._abstractActor(GeneralActor(self, self._Tstart, scriptName))
+            self._abstractActor(GeneralActor(self, self._Tstart, scriptName = scriptName))
     
     def _stop(self):
         with self.lock:
@@ -396,11 +396,11 @@ class App(multiprocessing.Process):
             
     def _refreshGit(self, tagOrCommit = None):
         with self.lock:
-            self._abstractActor(GeneralActor(self, self._TrefreshGit, tagOrCommit))
+            self._abstractActor(GeneralActor(self, self._TrefreshGit, tagOrCommit = tagOrCommit))
     
     def _refreshGitAndReset(self, tagOrCommit = None):
         with self.lock:
-            self._abstractActor(GeneralActor(self, self._TrefreshGitAndReset, tagOrCommit))
+            self._abstractActor(GeneralActor(self, self._TrefreshGitAndReset, tagOrCommit = tagOrCommit))
     
     def _Tstart(self, actor, scriptName, *args, **kwargs):
         return self.state.start(actor, scriptName)
@@ -421,7 +421,7 @@ class App(multiprocessing.Process):
         return self.state.refreshGit(actor, tagOrCommit)
     
     def _TrefreshGitAndReset(self, actor, tagOrCommit = None, *args, **kwargs):
-        return self.state.refreshGitAndReset(actor)
+        return self.state.refreshAndReset(actor)
         
 class GeneralActor(threading.Thread):
     

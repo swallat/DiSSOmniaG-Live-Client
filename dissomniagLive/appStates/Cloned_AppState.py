@@ -92,12 +92,26 @@ class Cloned_AppState(AbstractAppState):
         self.app._selectState(dissomniagLive.app.AppState.COMPILED)
         return True
                 
-            
+    def _resetGitHard(self, actor):
+        log = self.app.getLogger()
+        cmd = shlex.split("git reset --hard")
+        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        
+        output = self.app.proc.communicate()
+        self.multiLog(str(output))
+        
+        if self.app.isInterrupted or self.app.proc.returncode != 0:
+            self.multiLog("Git reset --hard interrupted or not possible.", log.info)
+            self.reset(actor)
+            return self.app.state.clone(actor)
+        else:
+            return True
+        
     
     def refreshGit(self, actor, tagOrCommit = None):
         log = self.app.getLogger()
         
-        cmd = shutil.split("git pull")
+        cmd = shlex.split("git pull")
         
         self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
         
@@ -110,11 +124,12 @@ class Cloned_AppState(AbstractAppState):
         
         if self.app.proc.returncode != 0:
             self.multiLog("Could not git pull.", log.error)
+            self._resetGitHard(actor)
             self.app._selectState(dissomniagLive.app.AppState.PULL_ERROR)
             return False
         
         if tagOrCommit != None:
-            cmd = shutil.split("git checkout %s", tagOrCommit)
+            cmd = shlex.split("git checkout %s", tagOrCommit)
             self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
             
             output = self.app.proc.communicate()
@@ -126,6 +141,7 @@ class Cloned_AppState(AbstractAppState):
             
             if self.app.proc.returncode != 0:
                 self.multiLog("Git checkout %s failed." % tagOrCommit, log.error)
+                self._resetGitHard(actor)
         
         return True
             
