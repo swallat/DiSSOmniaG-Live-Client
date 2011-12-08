@@ -21,7 +21,6 @@ def addApps(appXml):
         serverIpOrHost = str(app.find("serverIpOrHost").text)
         try:
             app = dispatcher.addApp(appName, serverUser, serverIpOrHost)
-            app.clone()
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -33,7 +32,7 @@ def appOperate(appXml):
     appName = str(xml.find("name").text)
     serverUser = str(xml.find("serverUser").text)
     serverIpOrHost = str(xml.find("serverIpOrHost").text)
-    action = int(xml.find("action"))
+    action = int(xml.find("action").text)
     
     if appName == None or serverUser == None or serverIpOrHost == None or action == None:
         return False
@@ -42,11 +41,14 @@ def appOperate(appXml):
     
     if scriptName != None:
         scriptName = str(scriptName.text)
+    else:
+        scriptName = None
         
     commitOrTag = xml.find("commitOrTag")
-    
     if commitOrTag != None:
         commitOrTag = str(commitOrTag.text)
+    else:
+        commitOrTag = None
     try:
         dispatcher = dissomniagLive.dispatcher.Dispatcher()
         if action == dissomniagLive.app.AppActions.START:
@@ -75,8 +77,7 @@ def appOperate(appXml):
         log.error(str(e))
         return False
         
-def appGetInfo(appName):
-    
+def getAppInfo(appName):
     if isinstance(appName, bytes):
         appName = str(appName.decode())
     else:
@@ -84,6 +85,7 @@ def appGetInfo(appName):
         
     dispatcher = dissomniagLive.dispatcher.Dispatcher()
     try:
+        print(dispatcher.getInfo(appName))
         return dispatcher.getInfo(appName)
     except Exception as e:
         import traceback

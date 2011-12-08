@@ -300,7 +300,7 @@ class App(multiprocessing.Process):
         with self.threadingLock:
             if AppState.isValid(appState):
                 self.state = self.stateObjects[appState]
-                self.namespace.state = AppState.getName(appState)
+                self.namespace.state = appState
         
     
     def _cleanUp(self):
@@ -344,6 +344,7 @@ class App(multiprocessing.Process):
         with self.lock and self.threadingLock: # Da wir auf namespace Daten lesend bzw. schreibend zugreifen
             try:
                 proxy = xmlrpc.client.ServerProxy(dissomniagLive.getIdentity().getServerUri())
+                self.log.info(self._getInfoXmlMsg())
                 proxy.updateAppInfo(self._getInfoXmlMsg())
             except Exception as e:
                 self.log.error("Could not send Info to central system. %s" % str(e))
@@ -352,7 +353,7 @@ class App(multiprocessing.Process):
     
     def _interrupt(self):
         with self.lock:
-            if hasattr(self, "proc") and self.proc.is_alive():
+            if hasattr(self, "proc") and self.proc.poll() == None:
                 try:
                     self.isInterrupted = True
                     if isinstance(self.proc, subprocess.Popen):
@@ -435,8 +436,10 @@ class GeneralActor(threading.Thread):
         self.kwargs = kwargs
         
     def run(self):
-        self.functionToRun(actor = self, *self.args, **self.kwargs)
-        self.app._sendInfo()
+        try:
+            self.functionToRun(actor = self, *self.args, **self.kwargs)
+        finally:
+            self.app._sendInfo()
             
             
     

@@ -3,8 +3,9 @@ Created on 30.11.2011
 
 @author: Sebastian Wallat
 '''
-import shutil, subprocess
+import shutil, subprocess, shlex
 import re
+import os
 import dissomniagLive
 from dissomniagLive.appStates import *
 
@@ -17,7 +18,7 @@ class Cloned_AppState(AbstractAppState):
         log = self.app.getLogger()
         environFile = os.path.join(self.app._getTargetPath(), "operate/environ")
         
-        if os.path.isFile(environFile):
+        if os.path.isfile(environFile):
             lines = []
             with open(environFile) as f:
                 f = lines.readlines()
@@ -51,7 +52,6 @@ class Cloned_AppState(AbstractAppState):
     
     def compile(self, actor):
         log = self.app.getLogger()
-        
         fileA = os.path.join(self.app._getOperateDirectory(), "compile")
         fileB = os.path.join(self.app._getOperateDirectory(), "compile.sh")
         file = None
@@ -69,8 +69,14 @@ class Cloned_AppState(AbstractAppState):
         except OSError:
             pass
         self.sourceEnviron(actor)
-        cmd = file
-        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        cmd = shlex.split(os.path.abspath(file))
+        log.error("POINT %s" % cmd)
+        try:
+            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        except OSError:
+            self.multiLog("The file %s is not an excecutable shell file. Skip comile." % file)
+            self.app._selectState(dissomniagLive.app.AppState.COMPILED)
+            return True
         
         output = self.app.proc.communicate()
         self.muliLog(str(output))

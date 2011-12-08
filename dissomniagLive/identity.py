@@ -348,7 +348,7 @@ class LiveIdentity(object):
             # 2. Add Keys
             with open("/home/user/.ssh/authorized_keys", 'w') as f:
                 for key in sshKeys:
-                    f.write("%s\n" % key)
+                    f.write("%s\n" % key.strip("\n"))
             
             # 3. Chmod authorized_keys
             
