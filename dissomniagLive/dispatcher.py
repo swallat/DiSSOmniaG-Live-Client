@@ -134,6 +134,14 @@ class Dispatcher(object):
             else:
                 return True
     
+    def cleanApp(self, name, serverUser, serverIpOrHost):
+        with self.lock:
+            app = self._getApp(name)
+            if app != None:
+                return app.clean()
+            else:
+                return self.addApp(name, serverUser, serverIpOrHost).clean()
+    
     def getInfo(self, name):
         with self.lock:
             app = self._getApp(name)

@@ -13,7 +13,7 @@ class PullError_AppState(AbstractAppState):
 
     def clone(self, actor):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
-        return self.app.clone(actor)
+        return self.app.state.clone(actor)
     
     def start(self, actor, scriptName):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
@@ -25,7 +25,7 @@ class PullError_AppState(AbstractAppState):
     def stop(self, actor):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
         if self.app.state.refreshGit(actor):
-            return self.app.stop(actor)
+            return self.app.state.stop(actor)
         else:
             return False
     
@@ -35,7 +35,7 @@ class PullError_AppState(AbstractAppState):
     def compile(self, actor):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
         if self.app.state.refreshGit(actor):
-            return self.app.compile(actor)
+            return self.app.state.compile(actor)
         else:
             return False
     
@@ -48,4 +48,7 @@ class PullError_AppState(AbstractAppState):
         return self.app.state.refreshAndReset(actor, tagOrCommit)
     
     def reset(self, actor):
-        raise NotImplementedError()
+        return self.clone(actor)
+    
+    def clean(self, actor):
+        return True

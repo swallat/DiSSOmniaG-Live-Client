@@ -14,23 +14,6 @@ class Cloned_AppState(AbstractAppState):
     classdocs
     '''
     
-    def sourceEnviron(self, actor):
-        log = self.app.getLogger()
-        environFile = os.path.join(self.app._getTargetPath(), "operate/environ")
-        
-        if os.path.isfile(environFile):
-            lines = []
-            with open(environFile) as f:
-                f = lines.readlines()
-            prog = re.compile("^(.*)=(.*)$")   
-            for line in lines:
-                for result in prog.finditer(line):
-                    key = result.groups()[0].strip()
-                    value = result.groups()[1].strip()
-                    os.environ[key] = value
-                    self.multiLog("Added Environ parameter. Key: %s, Value: %s" % (key, value), log.info)
-        return True
-    
     def clone(self, actor):
         log = self.app.getLogger()
         self.multiLog("Try to clone in cloned state not possible.", log.info)
@@ -74,7 +57,7 @@ class Cloned_AppState(AbstractAppState):
         try:
             self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
         except OSError:
-            self.multiLog("The file %s is not an excecutable shell file. Skip comile." % file)
+            self.multiLog("The file %s is not an excecutable shell file. Skip compile." % file)
             self.app._selectState(dissomniagLive.app.AppState.COMPILED)
             return True
         
@@ -102,7 +85,7 @@ class Cloned_AppState(AbstractAppState):
         
         if self.app.isInterrupted or self.app.proc.returncode != 0:
             self.multiLog("Git reset --hard interrupted or not possible.", log.info)
-            self.reset(actor)
+            self.reset(actor) # INIT State
             return self.app.state.clone(actor)
         else:
             return True
@@ -133,7 +116,7 @@ class Cloned_AppState(AbstractAppState):
             self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
             
             output = self.app.proc.communicate()
-            self.multiLog(str(output))
+            self.multiLog(str(output[0]))
             
             if self.app.isInterrupted:
                 self.multiLog("Git checkout %s interrupted." % tagOrCommit, log.error)
@@ -147,12 +130,14 @@ class Cloned_AppState(AbstractAppState):
             
     
     def refreshAndReset(self, actor, tagOrCommit = None):
-        return self.reshGit(actor, tagOrCommit)
+        return self.refreshGit(actor, tagOrCommit)
     
     def reset(self, actor):
         log = self.app.getLoger()
         self.multiLog("Reset from CLONED TO INIT.", log.info)
         self.app._selectState(dissomniagLive.app.AppState.INIT)
         return self.app.state.after_interrupt(actor)
-                
+    
+    def clean(self, actor):
+        return True
         

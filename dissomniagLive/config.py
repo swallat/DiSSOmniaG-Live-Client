@@ -7,7 +7,6 @@ Created on 28.09.2011
 
 import os
 import pwd
-import grp
 
 try:
     isDebug = (True if (os.environ['DEBUG'] in ("True", "1")) else False)
@@ -32,11 +31,9 @@ remoteRpcServerPort = 8008
 
 user = "user"
 
-group = user
-
 uid = pwd.getpwnam(user).pw_uid
 
-gid = grp.getgrnam(group).gr_gid
+gid = pwd.getpwnam(user).pw_gid
 
 rootPrivKey = "/root/.ssh/id_rsa"
 rootPubKey = "/root/.ssh/id_rsa.pub"
@@ -64,5 +61,5 @@ appBaseFolder = "/home/user/apps/"
 appLogFolder = os.path.join(appBaseFolder, "logs")
 
 operateSubdirIdentifier = "operate"
-
+resultsSubdirIdentifier = "results"
 

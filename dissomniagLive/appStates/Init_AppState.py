@@ -114,4 +114,7 @@ class Init_AppState(AbstractAppState):
     
     def reset(self, actor):
         return True
+    
+    def clean(self, actor):
+        return True
         

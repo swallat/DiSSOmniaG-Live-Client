@@ -13,31 +13,35 @@ class CompileError_AppState(AbstractAppState):
 
     def clone(self, actor):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
-        return self.app.clone(actor)
+        return self.app.state.clone(actor)
     
     def start(self, actor, scriptName):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
-        return self.app.start(actor, scriptName)
+        return self.app.state.start(actor, scriptName)
     
     def stop(self, actor):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
-        return self.app.stop(actor)
+        return self.app.state.ststop(actor)
     
     def after_interrupt(self, actor):
         return True
     
     def compile(self, actor):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
-        return self.app.compile(actor)
+        return self.app.state.compile(actor)
     
     def refreshGit(self, actor, tagOrCommit = None):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
-        return self.app.refreshGit(actor, tagOrCommit)
+        return self.app.state.refreshGit(actor, tagOrCommit)
     
     def refreshAndReset(self, actor, tagOrCommit = None):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
-        return self.app.refreshAndReset(actor, tagOrCommit)
+        return self.app.state.refreshAndReset(actor, tagOrCommit)
     
     def reset(self, actor):
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
-        return True  
+        return True
+    
+    def clean(self, actor):
+        self.app._selectState(dissomniagLive.app.AppState.COMPILED)
+        return self.app.state.clean(actor)

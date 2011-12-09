@@ -41,3 +41,7 @@ class CloneError_AppState(AbstractAppState):
     def reset(self, actor):
         self.app._selectState(dissomniagLive.app.AppState.INIT)
         return True
+    
+    def clean(self, actor):
+        self.app._selectState(dissomniagLive.app.AppState.INIT)
+        return self.app.state.clean(actor)

@@ -42,3 +42,7 @@ class RuntimeError_AppState(AbstractRuntime_AppState):
     def reset(self, actor):
         self.app._selectState(dissomniagLive.app.AppState.COMPILED)
         return True  
+    
+    def clean(self, actor):
+        self.app._selectState(dissomniagLive.app.AppState.COMPILED)
+        return self.app.state.clean(actor)

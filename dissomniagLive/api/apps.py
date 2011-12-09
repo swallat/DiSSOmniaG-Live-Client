@@ -50,27 +50,33 @@ def appOperate(appXml):
     else:
         commitOrTag = None
     try:
+        returnMe = None
         dispatcher = dissomniagLive.dispatcher.Dispatcher()
         if action == dissomniagLive.app.AppActions.START:
-            return dispatcher.startApp(appName, serverUser, serverIpOrHost, scriptName)
+            returnMe = dispatcher.startApp(appName, serverUser, serverIpOrHost, scriptName)
         elif action == dissomniagLive.app.AppActions.STOP:
-            return dispatcher.stopApp(appName, serverUser, serverIpOrHost)
+            returnMe = dispatcher.stopApp(appName, serverUser, serverIpOrHost)
         elif action == dissomniagLive.app.AppActions.COMPILE:
-            return dispatcher.compileApp(appName, serverUser, serverIpOrHost)
+            returnMe = dispatcher.compileApp(appName, serverUser, serverIpOrHost)
         elif action == dissomniagLive.app.AppActions.RESET:
-            return dispatcher.resetApp(appName, serverUser, serverIpOrHost)
+            returnMe = dispatcher.resetApp(appName, serverUser, serverIpOrHost)
         elif action == dissomniagLive.app.AppActions.INTERRUPT:
-            return dispatcher.interruptApp(appName, serverUser, serverIpOrHost)
+            returnMe = dispatcher.interruptApp(appName, serverUser, serverIpOrHost)
         elif action == dissomniagLive.app.AppActions.REFRESH_GIT:
-            return dispatcher.refreshGitApp(appName, serverUser, serverIpOrHost, commitOrTag)
+            returnMe = dispatcher.refreshGitApp(appName, serverUser, serverIpOrHost, commitOrTag)
         elif action == dissomniagLive.app.AppActions.REFRESH_AND_RESET:
-            return dispatcher.refreshAndResetApp(appName, serverUser, serverIpOrHost, commitOrTag)
+            returnMe = dispatcher.refreshAndResetApp(appName, serverUser, serverIpOrHost, commitOrTag)
         elif action == dissomniagLive.app.AppActions.CLONE:
-            return dispatcher.cloneApp(appName, serverUser, serverIpOrHost)
+            returnMe = dispatcher.cloneApp(appName, serverUser, serverIpOrHost)
         elif action == dissomniagLive.app.AppActions.DELETE:
-            return dispatcher.deleteApp(appName, serverUser, serverIpOrHost)
+            returnMe = dispatcher.deleteApp(appName, serverUser, serverIpOrHost)
+        elif action == dissomniagLive.app.AppActions.CLEAN:
+            returnMe = dispatcher.cleanApp(appName, serverUser, serverIpOrHost)
         else:
-            return False
+            returnMe = False
+        
+        log.info("appOperate returns: %s" % str(returnMe))
+        return returnMe
     except Exception as e:
         import traceback
         traceback.print_exc()

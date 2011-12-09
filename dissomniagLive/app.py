@@ -59,10 +59,11 @@ class AppActions:
     REFRESH_AND_RESET = 6
     CLONE = 7
     DELETE = 8
+    CLEAN = 9
     
     @staticmethod
     def isValid(appState):
-        if 0 <= appState < 9 and isinstance(appState, int):
+        if 0 <= appState < 10 and isinstance(appState, int):
             return True
         else:
             return False
@@ -87,6 +88,8 @@ class AppActions:
             return "CLONE"
         elif appState == AppActions.DELETE:
             return "DELETE"
+        elif appState == AppActions.CLEAN:
+            return "CLEAN"
     
     
 
@@ -128,6 +131,7 @@ class App(multiprocessing.Process):
         self.time = None
         self.isInterrupted = False
         self.branchName = branchName
+        self.ignoreRefresh = False
     
     def run(self):
         with self.lock:
@@ -169,6 +173,8 @@ class App(multiprocessing.Process):
                         self.log.info("Delete App!")
                         self.isRunning = False
                         break
+                    elif action == AppActions.CLEAN:
+                        self._clean()
                     
             self._stop()
             self._cleanUp()
@@ -179,18 +185,21 @@ class App(multiprocessing.Process):
             self.namespace.action = AppActions.START
             self.namespace.actionToDoArrived = True
             self.lock.notify_all()
+            return True
     
     def stop(self):
         with self.lock:
             self.namespace.action = AppActions.STOP
             self.namespace.actionToDoArrived = True
             self.lock.notify_all()
+            return True
     
     def interrupt(self):
         with self.lock:
             self.namespace.action = AppActions.INTERRUPT
             self.namespace.actionToDoArrived = True
             self.lock.notify_all()
+            return True
     
     def refreshGit(self, commitOrTag = None):
         with self.lock:
@@ -198,6 +207,7 @@ class App(multiprocessing.Process):
             self.namespace.action = AppActions.REFRESH_GIT
             self.namespace.actionToDoArrived = True
             self.lock.notify_all()
+            return True
     
     def refreshAndReset(self, commitOrTag = None):
         with self.lock:
@@ -205,30 +215,42 @@ class App(multiprocessing.Process):
             self.namespace.action = AppActions.REFRESH_AND_RESET
             self.namespace.actionToDoArrived = True
             self.lock.notify_all()
+            return True
     
     def clone(self):
         with self.lock:
             self.namespace.action = AppActions.CLONE
             self.namespace.actionToDoArrived = True
             self.lock.notify_all()
+            return True
     
     def compile(self):
         with self.lock:
             self.namespace.action = AppActions.COMPILE
             self.namespace.actionToDoArrived = True
             self.lock.notify_all()
+            return True
     
     def reset(self):
         with self.lock:
             self.namespace.action = AppActions.RESET
             self.namespace.actionToDoArrived = True
             self.lock.notify_all()
+            return True
             
     def delete(self):
         with self.lock:
             self.namespace.action = AppActions.DELETE
             self.namespace.actionToDoArrived = True
             self.lock.notify_all()
+            return True
+        
+    def clean(self):
+        with self.lock:
+            self.namespace.action = AppActions.CLEAN
+            self.namespace.actionToDoArrived = True
+            self.lock.notify_all()
+            return True
     
     def getInfo(self):
         return self._getInfoXmlMsg()
@@ -294,7 +316,17 @@ class App(multiprocessing.Process):
     
     def _getOperateDirectory(self):
         return os.path.join(self._getTargetPath(), dissomniagLive.config.operateSubdirIdentifier)
-        
+    
+    def _getResultsDirectory(self):
+        return os.path.join(self._getTargetPath(), dissomniagLive.config.resultsSubdirIdentifier)
+    
+    def _getIgnoreRefresh(self):
+        with self.lock:
+            return self.ignoreRefresh
+    
+    def _setIgnoreRefresh(self, set = False):
+        with self.lock:
+            self.ignoreRefresh = set
         
     def _selectState(self, appState):
         with self.threadingLock:
@@ -376,7 +408,10 @@ class App(multiprocessing.Process):
             
     def _startScript(self, scriptName):
         with self.lock:
-            self._abstractActor(GeneralActor(self, self._Tstart, scriptName = scriptName))
+            if scriptName == None:
+                self._startStandard()
+            else:
+                self._abstractActor(GeneralActor(self, self._Tstart, scriptName = scriptName))
     
     def _stop(self):
         with self.lock:
@@ -396,11 +431,21 @@ class App(multiprocessing.Process):
             
     def _refreshGit(self, tagOrCommit = None):
         with self.lock:
-            self._abstractActor(GeneralActor(self, self._TrefreshGit, tagOrCommit = tagOrCommit))
+            if not self._getIgnoreRefresh():
+                self._abstractActor(GeneralActor(self, self._TrefreshGit, tagOrCommit = tagOrCommit))
+            else:
+                self._setIgnoreRefresh(set = False)
     
     def _refreshGitAndReset(self, tagOrCommit = None):
         with self.lock:
-            self._abstractActor(GeneralActor(self, self._TrefreshGitAndReset, tagOrCommit = tagOrCommit))
+            if not self._getIgnoreRefresh():
+                self._abstractActor(GeneralActor(self, self._TrefreshGitAndReset, tagOrCommit = tagOrCommit))
+            else:
+                self._setIgnoreRefresh(set = False)
+            
+    def _clean(self):
+        with self.lock:
+            self._abstractActor(GeneralActor(self, self._Tclean))
     
     def _Tstart(self, actor, scriptName, *args, **kwargs):
         return self.state.start(actor, scriptName)
@@ -422,6 +467,9 @@ class App(multiprocessing.Process):
     
     def _TrefreshGitAndReset(self, actor, tagOrCommit = None, *args, **kwargs):
         return self.state.refreshAndReset(actor)
+    
+    def _Tclean(self, actor, *args, **kwargs):
+        return self.state.clean(actor)
         
 class GeneralActor(threading.Thread):
     
