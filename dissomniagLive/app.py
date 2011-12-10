@@ -5,6 +5,7 @@ Created on 29.11.2011
 @author: Sebastian Wallat
 '''
 import multiprocessing, threading
+import signal
 import subprocess, shlex, logging, os
 import time
 import xmlrpc.client
@@ -324,9 +325,9 @@ class App(multiprocessing.Process):
         with self.lock:
             return self.ignoreRefresh
     
-    def _setIgnoreRefresh(self, set = False):
-        with self.lock:
-            self.ignoreRefresh = set
+    def _setIgnoreRefresh(self, mSet = False):
+        with self.threadingLock:
+            self.ignoreRefresh = mSet
         
     def _selectState(self, appState):
         with self.threadingLock:
@@ -352,15 +353,15 @@ class App(multiprocessing.Process):
         self.appDeleteListener.deleteApp(self.name)
         
     def _cleanLog(self):
-        with self.threadingLock and self.lock:
+        with self.threadingLock:
             self.namespace.log = ""
             
     def _appendRemoteLog(self, msg):
-        with self.threadingLock and self.lock:
+        with self.threadingLock:
             self.namespace.log = self.namespace.log + msg + "\n"
             
     def _getInfoXmlMsg(self):
-        with self.lock and self.threadingLock:
+        with self.threadingLock:
             tree = ElementTree.Element("AppInfo")
             uuid = ElementTree.SubElement(tree, "uuid")
             uuid.text = str(self.nodeUUID)
@@ -373,7 +374,7 @@ class App(multiprocessing.Process):
             return ElementTree.tostring(tree)
         
     def _sendInfo(self):
-        with self.lock and self.threadingLock: # Da wir auf namespace Daten lesend bzw. schreibend zugreifen
+        with self.threadingLock: # Da wir auf namespace Daten lesend bzw. schreibend zugreifen
             try:
                 proxy = xmlrpc.client.ServerProxy(dissomniagLive.getIdentity().getServerUri())
                 self.log.info(self._getInfoXmlMsg())
@@ -384,21 +385,24 @@ class App(multiprocessing.Process):
                 self._cleanLog()
     
     def _interrupt(self):
-        with self.lock:
-            if hasattr(self, "proc") and self.proc.poll() == None:
-                try:
+       if hasattr(self, "proc") and self.proc.poll() == None:
+            try:
+                with self.threadingLock:
                     self.isInterrupted = True
                     if isinstance(self.proc, subprocess.Popen):
-                        self.proc.interrupt() # Let the actor join the process
-                except OSError:
-                    pass
-                finally:
+                        os.killpg(self.proc.pid, signal.SIGTERM) # Let the actor join the process
+            except OSError:
+                pass
+            finally:
+                if isinstance(self.thread, GeneralActor) and self.thread.is_alive():
+                    self.log.info("Try to join")
                     self.thread.join()
-                    self.isInterrupted = False
+                    self.log.info("Joined")
+                self.isInterrupted = False
                     
     def _abstractActor(self, actorToRun):
         with self.lock:
-            if isinstance(actorToRun, threading.Thread):
+            if isinstance(actorToRun, GeneralActor):
                 self._interrupt()
                 self.thread = actorToRun
                 self.thread.start()
@@ -415,7 +419,10 @@ class App(multiprocessing.Process):
     
     def _stop(self):
         with self.lock:
-            self._abstractActor(GeneralActor(self, self._Tstop))
+            if self.namespace.state == AppState.STARTED:
+                self._interrupt()
+            else:
+                self._abstractActor(GeneralActor(self, self._Tstop))
             
     def _clone(self):
         with self.lock:
@@ -434,14 +441,14 @@ class App(multiprocessing.Process):
             if not self._getIgnoreRefresh():
                 self._abstractActor(GeneralActor(self, self._TrefreshGit, tagOrCommit = tagOrCommit))
             else:
-                self._setIgnoreRefresh(set = False)
+                self._setIgnoreRefresh(mSet = False)
     
     def _refreshGitAndReset(self, tagOrCommit = None):
         with self.lock:
             if not self._getIgnoreRefresh():
                 self._abstractActor(GeneralActor(self, self._TrefreshGitAndReset, tagOrCommit = tagOrCommit))
             else:
-                self._setIgnoreRefresh(set = False)
+                self._setIgnoreRefresh(mSet = False)
             
     def _clean(self):
         with self.lock:
@@ -484,10 +491,17 @@ class GeneralActor(threading.Thread):
         self.kwargs = kwargs
         
     def run(self):
+        ret = None
         try:
-            self.functionToRun(actor = self, *self.args, **self.kwargs)
+            ret = self.functionToRun(actor = self, *self.args, **self.kwargs)
         finally:
+            import logging
+            log = logging.getLogger("dissomniagLive.app.GeneralActor")
+            log.info("App %s, %s finished. Ret: %s" % (self.app.name, self.functionToRun.__name__, str(ret)))
             self.app._sendInfo()
+            log.info("App %s, After sendInfo %s" % (self.app.name, self.functionToRun.__name__))
+            
+            
             
             
     

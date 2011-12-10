@@ -72,7 +72,7 @@ class AbstractAppState(metaclass=abc.ABCMeta):
         if os.path.isfile(environFile):
             lines = []
             with open(environFile) as f:
-                f = lines.readlines()
+                lines = f.readlines()
             prog = re.compile("^(.*)=(.*)$")   
             for line in lines:
                 for result in prog.finditer(line):

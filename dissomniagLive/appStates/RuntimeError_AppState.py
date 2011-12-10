@@ -37,7 +37,11 @@ class RuntimeError_AppState(AbstractRuntime_AppState):
     
     def refreshAndReset(self, actor, tagOrCommit = None):
         self.app._selectState(dissomniagLive.app.AppState.COMPILED)
-        return self.app.state.refreshAndReset(actor, tagOrCommit) 
+        ret = self.app.state.refreshAndReset(actor, tagOrCommit)
+        if ret and hasattr(self, "scriptName"):
+            self.app.state.start(actor, self.scriptName)
+        else:
+            return ret
     
     def reset(self, actor):
         self.app._selectState(dissomniagLive.app.AppState.COMPILED)

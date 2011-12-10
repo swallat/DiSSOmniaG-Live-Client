@@ -4,6 +4,7 @@ Created on 30.11.2011
 @author: Sebastian Wallat
 '''
 import subprocess
+import signal
 import shlex
 import os
 import dissomniagLive
@@ -13,23 +14,6 @@ class Started_AppState(AbstractRuntime_AppState):
     '''
     classdocs
     '''
-    
-    def sourceEnviron(self, actor):
-        log = self.app.getLogger()
-        environFile = os.path.join(self.app._getTargetPath(), "operate/environ")
-        
-        if os.path.isfile(environFile):
-            lines = []
-            with open(environFile) as f:
-                f = lines.readlines()
-            prog = re.compile("^(.*)=(.*)$")   
-            for line in lines:
-                for result in prog.finditer(line):
-                    key = result.groups()[0].strip()
-                    value = result.groups()[1].strip()
-                    os.environ[key] = value
-                    self.multiLog("Added Environ parameter. Key: %s, Value: %s" % (key, value), log.info)
-        return True
     
     def clone(self, actor):
         return True
@@ -45,16 +29,11 @@ class Started_AppState(AbstractRuntime_AppState):
                 cmd = shlex.split("git add %s" % fileToAdd)
                 self.multiLog("git add %s" % fileToAdd, log.info)
                 try:
-                    self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+                    self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.PIPE, preexec_fn = os.setsid)
                     output = self.app.proc.communicate()
                     self.multiLog(str(output), log.info)
                 except Exception as e:
                     pass
-                
-                if self.app.isInterrupted:
-                    self.multiLog("gather results was interrupted ", log.error)
-                    self.app._selectState(dissomniagLive.app.AppState.COMPILED)
-                    return False
                 
                 if self.app.proc.returncode != 0:
                     self.multiLog("git add failure. git add %s" % fileToAdd, log.error)
@@ -79,7 +58,7 @@ class Started_AppState(AbstractRuntime_AppState):
                 cmd = shlex.split("git push")
                 self.multiLog("git push", log.info)
                 
-                proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+                proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.PIPE, preexec_fn = os.setsid)
                 
                 output = proc.communicate()
                 self.multiLog(str(output), log.info)
@@ -92,7 +71,7 @@ class Started_AppState(AbstractRuntime_AppState):
                         return self.app.state.compile(actor)
                     else:
                         return False
-                self.app._setIgnoreRefresh(set = True)
+                self.app._setIgnoreRefresh(mSet = True)
                 
         except Exception as e:
             import traceback
@@ -104,7 +83,7 @@ class Started_AppState(AbstractRuntime_AppState):
                 return self.app.state.compile(actor)
             else:
                 return False
-        
+        self.multiLog("Gather results exists normally.", log.info)
         return True
 
     
@@ -130,25 +109,26 @@ class Started_AppState(AbstractRuntime_AppState):
         
         cmd = file
         try:
-            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+            self.multiLog("Starting app with script %s." % str(file), log.info)
+            self.app._sendInfo()
+            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.PIPE, preexec_fn = os.setsid)
+            output = self.app.proc.communicate()
+            self.multiLog(str(output), log.info)
         except OSError as e:
             self.multiLog("Script %s is not executable or is not a script file. %s" % (file,str(e)))
             self.app._selectState(dissomniagLive.app.AppState.RUNTIME_ERROR)
             self.app.state.setRunningScript(scriptName)
             return False
         
-        output = self.app.proc.communicate()
-        self.multiLog(str(output), log.info)
-        
         if self.app.isInterrupted:
             self.multiLog("script execution was interrupted %s ." % scriptName, log.error)
-            return self.afterInterrupt(actor)
         
-        if self.app.proc.returncode != 0:
+        if self.app.proc.returncode != 0 and not self.app.isInterrupted:
             self.multiLog("Script executed with failures!", log.error)
             self.app._selectState(dissomniagLive.app.AppState.RUNTIME_ERROR)
             self.app.state.setRunningScript(scriptName)
             return False
+        
         self.multiLog("Script finished execution.", log.info)
         self._gatherResults(actor)
         self.app._selectState(dissomniagLive.app.AppState.COMPILED)
@@ -160,7 +140,7 @@ class Started_AppState(AbstractRuntime_AppState):
         
         if self.app.proc != None and isinstance(self.app.proc, subprocess.Popen):
             try:
-                self.app.proc.kill()
+                os.killpg(self.app.proc.pid, signal.SIGTERM)
             except Exception as e:
                 self.multiLog("Stop throwed exception %s." % str(e), log.error)
         self._gatherResults(actor)

@@ -18,7 +18,7 @@ class Init_AppState(AbstractAppState):
         
         self.multiLog("Try to clone from %s to %s" % (self.app._getServerConnector(), self.app._getTargetPath()), log.info)
         cmd = shlex.split("git clone %s %s -b %s" % (self.app._getServerConnector(), self.app._getTargetPath(), self.app.branchName))
-        self.app.proc = subprocess.Popen(cmd, cwd = dissomniagLive.config.appBaseFolder, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        self.app.proc = subprocess.Popen(cmd, cwd = dissomniagLive.config.appBaseFolder, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setsid)
         
         output = self.app.proc.communicate()
         self.multiLog(str(output))

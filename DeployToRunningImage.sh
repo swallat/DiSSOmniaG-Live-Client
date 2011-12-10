@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -x
 sshKeyFile=/home/sw/.ssh/id_rsa.pub
-ip=10.11.0.104
+ip=10.11.0.105
 tarBallName=dissomniagLive.tar.gz
 targetFolder=/usr/share/dissomniag-live/
 

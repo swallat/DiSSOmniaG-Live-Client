@@ -16,8 +16,8 @@ class Cloned_AppState(AbstractAppState):
     
     def clone(self, actor):
         log = self.app.getLogger()
-        self.multiLog("Try to clone in cloned state not possible.", log.info)
-        return True
+        self.multiLog("Try to refreshGit instead of clone.", log.info)
+        return self.refreshGit(actor)
                     
     def start(self, actor, scriptName):
         if self.compile(actor):
@@ -55,7 +55,7 @@ class Cloned_AppState(AbstractAppState):
         cmd = shlex.split(os.path.abspath(file))
         log.error("POINT %s" % cmd)
         try:
-            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setsid)
         except OSError:
             self.multiLog("The file %s is not an excecutable shell file. Skip compile." % file)
             self.app._selectState(dissomniagLive.app.AppState.COMPILED)
@@ -78,7 +78,7 @@ class Cloned_AppState(AbstractAppState):
     def _resetGitHard(self, actor):
         log = self.app.getLogger()
         cmd = shlex.split("git reset --hard")
-        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setsid)
         
         output = self.app.proc.communicate()
         self.multiLog(str(output))
@@ -96,7 +96,7 @@ class Cloned_AppState(AbstractAppState):
         
         cmd = shlex.split("git pull")
         
-        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setsid)
         
         output = self.app.proc.communicate()
         self.multiLog(str(output))
@@ -113,7 +113,7 @@ class Cloned_AppState(AbstractAppState):
         
         if tagOrCommit != None:
             cmd = shlex.split("git checkout %s", tagOrCommit)
-            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setsid)
             
             output = self.app.proc.communicate()
             self.multiLog(str(output[0]))

@@ -59,7 +59,7 @@ class Compiled_AppState(AbstractAppState):
         
         cmd = file
         try:
-            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+            self.app.proc = subprocess.Popen(cmd, cwd = self.app._getTargetPath(), stdout = subprocess.PIPE, stderr = subprocess.PIPE, preexec_fn = os.setsid)
         except OSError as e:
             self.multiLog("Script %s is not executable or is not a script file. %s" % (file,str(e)))
             self.app._selectState(dissomniagLive.app.AppState.CLONED)
