@@ -68,6 +68,8 @@ class AbstractAppState(metaclass=abc.ABCMeta):
     def sourceEnviron(self, actor):
         log = self.app.getLogger()
         environFile = os.path.join(self.app._getTargetPath(), "operate/environ")
+        # Add APP_HOME Path
+        os.environ["APP_HOME"] = self.app._getTargetPath()
         
         if os.path.isfile(environFile):
             lines = []
