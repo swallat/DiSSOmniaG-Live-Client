@@ -84,6 +84,7 @@ class AbstractAppState(metaclass=abc.ABCMeta):
         environFile = os.path.join(self.app._getTargetPath(), "operate/environ")
         # Add APP_HOME Path
         os.environ["APP_HOME"] = self.app._getTargetPath()
+        self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("APP_HOME", os.environ["APP_HOME"]), log.info)
         
         if os.path.isfile(environFile):
             lines = []
@@ -91,6 +92,8 @@ class AbstractAppState(metaclass=abc.ABCMeta):
                 lines = f.readlines()
             prog = re.compile("^(.*)=(.*)$")   
             for line in lines:
+                if line.startswith("#"):
+                    continue
                 for result in prog.finditer(line):
                     key = result.groups()[0].strip()
                     value = result.groups()[1].strip()
