@@ -85,6 +85,14 @@ class AbstractAppState(metaclass=abc.ABCMeta):
         # Add APP_HOME Path
         os.environ["APP_HOME"] = self.app._getTargetPath()
         self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("APP_HOME", os.environ["APP_HOME"]), log.info)
+        os.environ["omnetpp_root"] = "/home/user/OMNeT"
+        self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("omnetpp_root", os.environ["omnetpp_root"]), log.info)
+        os.environ["PATH"] = ":".join(["/sbin", os.environ["omnetpp_root"]+"/bin", os.environ["PATH"]])
+        self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("PATH", os.environ["PATH"]), log.info)
+        os.environ["LD_LIBRARY_PATH"] = ":".join([os.environ["omnetpp_root"]+"/lib", os.environ["LD_LIBRARY_PATH"]])
+        self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("LD_LIBRARY_PATH", os.environ["LD_LIBRARY_PATH"]), log.info)
+        os.environ["TCL_LIBRARY"] = "/usr/share/tcltk/tcl8.4"
+        self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("TCL_LIBRARY", os.environ["TCL_LIBRARY"]), log.info)
         
         if os.path.isfile(environFile):
             lines = []
