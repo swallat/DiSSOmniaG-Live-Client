@@ -89,8 +89,12 @@ class AbstractAppState(metaclass=abc.ABCMeta):
         self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("omnetpp_root", os.environ["omnetpp_root"]), log.info)
         os.environ["PATH"] = ":".join(["/sbin", os.environ["omnetpp_root"]+"/bin", os.environ["PATH"]])
         self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("PATH", os.environ["PATH"]), log.info)
-        os.environ["LD_LIBRARY_PATH"] = ":".join([os.environ["omnetpp_root"]+"/lib", os.environ["LD_LIBRARY_PATH"]])
-        self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("LD_LIBRARY_PATH", os.environ["LD_LIBRARY_PATH"]), log.info)
+        try:
+            os.environ["LD_LIBRARY_PATH"] = ":".join([os.environ["omnetpp_root"]+"/lib", os.environ["LD_LIBRARY_PATH"]])
+            self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("LD_LIBRARY_PATH", os.environ["LD_LIBRARY_PATH"]), log.info)
+        except KeyError:
+            os.environ["LD_LIBRARY_PATH"] = ":".join([os.environ["omnetpp_root"]+"/lib"])
+            self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("LD_LIBRARY_PATH", os.environ["LD_LIBRARY_PATH"]), log.info)
         os.environ["TCL_LIBRARY"] = "/usr/share/tcltk/tcl8.4"
         self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("TCL_LIBRARY", os.environ["TCL_LIBRARY"]), log.info)
         

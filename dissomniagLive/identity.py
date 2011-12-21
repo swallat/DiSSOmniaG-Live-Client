@@ -440,7 +440,7 @@ class LiveIdentity(object):
             
             os.makedirs(dissomniagLive.config.appLogFolder, 0o755)
             os.chown(dissomniagLive.config.appLogFolder, 1000, 1000)
-        except OSError:
+        except Exception:
             pass
         
     def _getIpAddress(self, ifname):
