@@ -36,6 +36,7 @@ class AbstractAppState(metaclass=abc.ABCMeta):
         '''
         
         self.app = app
+        self.environmentSourced = False
         
     def multiLog(self, msg, loggerFunction = None):
         if loggerFunction != None:
@@ -79,24 +80,48 @@ class AbstractAppState(metaclass=abc.ABCMeta):
     def reset(self, actor):
         raise NotImplementedError()
     
+    def _sourceXauthEnviron(self, log):
+        basePath = "/var/run/gdm3"
+        username = "user"
+        beginning = "auth-for-%s" % (username)
+        for f in os.listdir(basePath):
+            if f.startswith(beginning):
+                fullPath = os.path.join(basePath, f)
+                full = os.path.join(fullPath, "database")
+                os.environ["XAUTHORITY"] = full
+                self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("XAUTHORITY", os.environ["XAUTHORITY"]), log.info)
+        
+        os.environ["DISPLAY"] = ":0.0"
+        self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("DISPLAY", os.environ["DISPLAY"]), log.info)
+        
     def sourceEnviron(self, actor):
+        
         log = self.app.getLogger()
         environFile = os.path.join(self.app._getTargetPath(), "operate/environ")
         # Add APP_HOME Path
         os.environ["APP_HOME"] = self.app._getTargetPath()
         self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("APP_HOME", os.environ["APP_HOME"]), log.info)
         os.environ["omnetpp_root"] = "/home/user/OMNeT"
+        
+        if not self.environmentSourced:
+            self.oldPath = os.environ["PATH"]
+            try:
+                self.oldLdLibraryPath = os.environ["LD_LIBRARY_PATH"]
+            except Exception as e:
+                self.oldLdLibraryPath = ""
+            
+            self.environmentSourced = True
+            
         self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("omnetpp_root", os.environ["omnetpp_root"]), log.info)
-        os.environ["PATH"] = ":".join(["/sbin", os.environ["omnetpp_root"]+"/bin", os.environ["PATH"]])
+        os.environ["PATH"] = ":".join(["/sbin", os.environ["omnetpp_root"]+"/bin", self.oldPath])
         self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("PATH", os.environ["PATH"]), log.info)
-        try:
-            os.environ["LD_LIBRARY_PATH"] = ":".join([os.environ["omnetpp_root"]+"/lib", os.environ["LD_LIBRARY_PATH"]])
-            self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("LD_LIBRARY_PATH", os.environ["LD_LIBRARY_PATH"]), log.info)
-        except KeyError:
-            os.environ["LD_LIBRARY_PATH"] = ":".join([os.environ["omnetpp_root"]+"/lib"])
-            self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("LD_LIBRARY_PATH", os.environ["LD_LIBRARY_PATH"]), log.info)
+
+        os.environ["LD_LIBRARY_PATH"] = ":".join([os.environ["omnetpp_root"]+"/lib", self.oldLdLibraryPath])
+        self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("LD_LIBRARY_PATH", os.environ["LD_LIBRARY_PATH"]), log.info)
         os.environ["TCL_LIBRARY"] = "/usr/share/tcltk/tcl8.4"
         self.multiLog("Added Environ parameter. Key: %s, Value: %s" % ("TCL_LIBRARY", os.environ["TCL_LIBRARY"]), log.info)
+        
+        self._sourceXauthEnviron(log)
         
         if os.path.isfile(environFile):
             lines = []
