@@ -173,7 +173,9 @@ class Started_AppState(AbstractRuntime_AppState):
     def refreshGit(self, actor, tagOrCommit = None):
         self.stop(actor)
         self.app._selectState(dissomniagLive.app.AppState.CLONED)
-        return self.app.state.refreshGit(actor, tagOrCommit)
+        #return self.app.state.refreshGit(actor, tagOrCommit)
+        if self.app.state.refreshGit(actor, tagOrCommit):
+            return self.app.state.start(actor, tagOrCommit)
     
     def refreshAndReset(self, actor, tagOrCommit = None):
         self.stop(actor)
